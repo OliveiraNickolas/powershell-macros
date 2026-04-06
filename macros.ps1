@@ -644,6 +644,54 @@ function New-TitleBar($form, $title, $w) {
 
 
 # ============================================================
+#  HELPERS DGV (scope script — acessíveis por timers e event handlers)
+# ============================================================
+
+function Add-DgvRow {
+    param($dg, $type, $xv="", $yv="", $msv="", $txtv="", $ldv="")
+    $r = New-Object System.Windows.Forms.DataGridViewRow
+    $r.CreateCells($dg)
+    $r.Cells["Type"].Value = $type
+    $r.Cells["X"].Value    = $xv
+    $r.Cells["Y"].Value    = $yv
+    $r.Cells["Ms"].Value   = $msv
+    $r.Cells["Text"].Value = $txtv
+    $r.Cells["Load"].Value = $ldv
+    $r.Cells["Del"].Value  = "X"
+    $dg.Rows.Add($r) | Out-Null
+    $dg.Refresh()
+    return $dg.Rows.Count - 1
+}
+
+function Remove-DgvRow { param($ri)
+    $ctl=$script:recCtl; $dg=$ctl.dgv
+    $dg.Rows.RemoveAt($ri); $dg.Refresh()
+    if($ri -lt $ctl.previewRow){$ctl.previewRow--}
+    elseif($ri -eq $ctl.previewRow){$ctl.previewRow=-1}
+}
+
+function Insert-DgvRow { param($type, $idx)
+    $ctl=$script:recCtl; $dg=$ctl.dgv
+    $r=New-Object System.Windows.Forms.DataGridViewRow; $r.CreateCells($dg)
+    $r.Cells["Type"].Value=$type; $r.Cells["Del"].Value="X"
+    if($type -eq "Delay"){$r.Cells["Ms"].Value="500";$r.Cells["Load"].Value="0"}
+    $dg.Rows.Insert($idx,$r); $dg.Refresh()
+    if($ctl.previewRow -ge $idx){$ctl.previewRow++}
+    $focusCol=if($type -eq "Delay"){"Ms"}elseif($type -in "TypeText","Message"){"Text"}else{"Type"}
+    try{$dg.CurrentCell=$dg.Rows[$idx].Cells[$focusCol]}catch{}
+}
+
+function Swap-DgvRows { param($a,$b)
+    $ctl=$script:recCtl; $dg=$ctl.dgv; $n=$dg.Columns.Count-1
+    $va=0..($n-1)|ForEach-Object{$dg.Rows[$a].Cells[$_].Value}
+    $vb=0..($n-1)|ForEach-Object{$dg.Rows[$b].Cells[$_].Value}
+    for($c=0;$c-lt$n;$c++){$dg.Rows[$a].Cells[$c].Value=$vb[$c];$dg.Rows[$b].Cells[$c].Value=$va[$c]}
+    $dg.Refresh()
+    if($ctl.previewRow -eq $a){$ctl.previewRow=$b}elseif($ctl.previewRow -eq $b){$ctl.previewRow=$a}
+}
+
+
+# ============================================================
 #  FORMULARIO GRAVADOR (abre em janela separada)
 # ============================================================
 
@@ -770,22 +818,6 @@ function Open-RecorderForm {
     ))
     $dgv.ContextMenuStrip = $ctxMenu
 
-    # ── Helper: adicionar linha ao DGV ────────────────────────────
-    function Add-DgvRow {
-        param($dg, $type, $xv="", $yv="", $msv="", $txtv="", $ldv="")
-        $r = New-Object System.Windows.Forms.DataGridViewRow
-        $r.CreateCells($dg)
-        $r.Cells["Type"].Value = $type
-        $r.Cells["X"].Value   = $xv
-        $r.Cells["Y"].Value   = $yv
-        $r.Cells["Ms"].Value  = $msv
-        $r.Cells["Text"].Value= $txtv
-        $r.Cells["Load"].Value= $ldv
-        $r.Cells["Del"].Value = "X"
-        $dg.Rows.Add($r) | Out-Null
-        return $dg.Rows.Count - 1
-    }
-
     # ── Estado global ──────────────────────────────────────────────
     $script:recCtl = @{
         dgv=         $dgv
@@ -852,7 +884,7 @@ function Open-RecorderForm {
             if($ctl.previewRow -lt 0){
                 Add-DgvRow $dg "TypeText" "" "" "" $preview "" | Out-Null
                 $ctl.previewRow=$dg.Rows.Count-1
-                $dg.FirstDisplayedScrollingRowIndex=$dg.Rows.Count-1
+                if($dg.Rows.Count -gt 0){$dg.FirstDisplayedScrollingRowIndex=$dg.Rows.Count-1}
             } else {
                 try{$dg.Rows[$ctl.previewRow].Cells["Text"].Value=$preview}catch{}
             }
@@ -866,32 +898,6 @@ function Open-RecorderForm {
         }
     })
     $script:recCtl.timerRec=$timerRec
-
-    # ── Delete row helper (inline, sem scope issues) ──────────────
-    function Remove-DgvRow { param($ri)
-        $ctl=$script:recCtl; $dg=$ctl.dgv
-        $dg.Rows.RemoveAt($ri); $dg.Refresh()
-        if($ri -lt $ctl.previewRow){$ctl.previewRow--}
-        elseif($ri -eq $ctl.previewRow){$ctl.previewRow=-1}
-    }
-    function Insert-DgvRow { param($type, $idx)
-        $ctl=$script:recCtl; $dg=$ctl.dgv
-        $r=New-Object System.Windows.Forms.DataGridViewRow; $r.CreateCells($dg)
-        $r.Cells["Type"].Value=$type; $r.Cells["Del"].Value="X"
-        if($type -eq "Delay"){$r.Cells["Ms"].Value="500";$r.Cells["Load"].Value="0"}
-        $dg.Rows.Insert($idx,$r); $dg.Refresh()
-        if($ctl.previewRow -ge $idx){$ctl.previewRow++}
-        $focusCol=if($type -eq "Delay"){"Ms"}elseif($type -in "TypeText","Message"){"Text"}else{"Type"}
-        try{$dg.CurrentCell=$dg.Rows[$idx].Cells[$focusCol]}catch{}
-    }
-    function Swap-DgvRows { param($a,$b)
-        $ctl=$script:recCtl; $dg=$ctl.dgv; $n=$dg.Columns.Count-1
-        $va=0..($n-1)|ForEach-Object{$dg.Rows[$a].Cells[$_].Value}
-        $vb=0..($n-1)|ForEach-Object{$dg.Rows[$b].Cells[$_].Value}
-        for($c=0;$c-lt$n;$c++){$dg.Rows[$a].Cells[$c].Value=$vb[$c];$dg.Rows[$b].Cells[$c].Value=$va[$c]}
-        $dg.Refresh()
-        if($ctl.previewRow -eq $a){$ctl.previewRow=$b}elseif($ctl.previewRow -eq $b){$ctl.previewRow=$a}
-    }
 
     # ── Botão X (coluna Del) ──────────────────────────────────────
     $dgv.add_CellClick({
