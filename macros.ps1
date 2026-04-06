@@ -69,8 +69,10 @@ public class User32 {
     public static void SendWinKey(byte key)           { keybd_event(VK_LWIN,0,0,0); keybd_event(key,0,0,0); keybd_event(key,0,KEYEVENTF_KEYUP,0); keybd_event(VK_LWIN,0,KEYEVENTF_KEYUP,0); }
     public static void SendAltTab()  { keybd_event(VK_MENU,0,0,0); keybd_event(0x09,0,0,0); keybd_event(0x09,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); }
     public static void SendAltF4()   { keybd_event(VK_MENU,0,0,0); keybd_event(VK_F4,0,0,0); keybd_event(VK_F4,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); }
-    public static void SendShift(byte vk)    { keybd_event(VK_SHIFT,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_SHIFT,0,KEYEVENTF_KEYUP,0); }
-    public static void SendAltShift(byte vk) { keybd_event(VK_MENU,0,0,0); keybd_event(VK_SHIFT,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_SHIFT,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); }
+    public static void SendShift(byte vk)     { keybd_event(VK_SHIFT,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_SHIFT,0,KEYEVENTF_KEYUP,0); }
+    public static void SendAlt(byte vk)       { keybd_event(VK_MENU,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); }
+    public static void SendAltShift(byte vk)  { keybd_event(VK_MENU,0,0,0); keybd_event(VK_SHIFT,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_SHIFT,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); }
+    public static void SendCtrlAlt(byte vk)   { keybd_event(VK_CONTROL,0,0,0); keybd_event(VK_MENU,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); keybd_event(VK_CONTROL,0,KEYEVENTF_KEYUP,0); }
 }
 "@ }
 
@@ -205,42 +207,75 @@ public class MacroRecorder {
         return CallNextHookEx(_keyHook, nCode, wParam, lParam);
     }
 
+    // Converte VK num nome legível para qualquer combinação de modificadores
+    private static string VkName(int vk) {
+        if (vk>=0x41&&vk<=0x5A) return ""+(char)vk;          // A-Z
+        if (vk>=0x30&&vk<=0x39) return "D"+(char)vk;         // D0-D9 (fila superior)
+        if (vk>=0x60&&vk<=0x69) return "Num"+(vk-0x60);      // Num0-Num9 (numpad)
+        if (vk>=0x70&&vk<=0x7B) return "F"+(vk-0x6F);        // F1-F12
+        switch(vk) {
+            case 0x25:return "ArrowLeft";  case 0x26:return "ArrowUp";
+            case 0x27:return "ArrowRight"; case 0x28:return "ArrowDown";
+            case 0x24:return "Home";       case 0x23:return "End";
+            case 0x21:return "PgUp";       case 0x22:return "PgDn";
+            case 0x2D:return "Ins";        case 0x2E:return "Del";
+            case 0x1B:return "Esc";        case 0x09:return "Tab";
+            case 0x20:return "Space";      case 0x0D:return "Enter";
+            case 0x08:return "Back";       case 0x6D:return "NumMinus";
+            case 0x6B:return "NumPlus";    case 0x6A:return "NumMul";
+            case 0x6F:return "NumDiv";     case 0x6C:return "NumSep";
+            case 0x90:return "NumLock";    case 0x91:return "ScrollLock";
+            case 0x14:return "CapsLock";
+        }
+        return null;
+    }
+
     private static string MapKey(int vk, bool ctrl, bool alt, bool shift, bool win) {
+        string n = VkName(vk);
+
+        // Win + qualquer tecla (sem Ctrl/Alt)
         if (win && !ctrl && !alt) {
-            switch(vk) { case 0x25:return "WinArrowLeft"; case 0x26:return "WinArrowUp"; case 0x27:return "WinArrowRight"; case 0x28:return "WinArrowDown"; case 0x52:return "WinR"; }
+            if (n != null) return "Win"+n;
         }
+        // Ctrl+Alt (sem Shift/Win)
+        if (ctrl && alt && !shift && !win) {
+            if (n != null) return "CtrlAlt"+n;
+        }
+        // Alt+Shift (sem Ctrl/Win)
         if (alt && shift && !ctrl && !win) {
-            if (vk>=0x30&&vk<=0x39) return "AltShift"+(char)vk;  // Alt+Shift+0..9 (fila superior)
+            if (n != null) return "AltShift"+n;
         }
+        // Alt só (sem Ctrl/Shift/Win)
         if (alt && !ctrl && !shift && !win) {
-            if (vk==0x73) return "AltF4";
-            if (vk==0x09) return "AltTab";
+            if (n != null) return "Alt"+n;
         }
+        // Ctrl+Shift (sem Alt/Win)
         if (ctrl && shift && !alt && !win) {
-            if (vk>=0x41&&vk<=0x5A) return "CtrlShift"+(char)vk;
-            if (vk>=0x30&&vk<=0x39) return "CtrlShift"+(char)vk;  // Ctrl+Shift+0..9 (fila superior)
-            switch(vk) { case 0x24:return "CtrlShiftHome"; case 0x23:return "CtrlShiftEnd"; }
+            if (n != null) return "CtrlShift"+n;
         }
+        // Ctrl só (sem Alt/Shift/Win)
         if (ctrl && !alt && !shift && !win) {
-            if (vk>=0x41&&vk<=0x5A) return "Ctrl"+(char)vk;
-            if (vk>=0x60&&vk<=0x69) return "CtrlNum"+(vk-0x60);
-            switch(vk) { case 0x21:return "CtrlPageUp"; case 0x22:return "CtrlPageDown"; case 0x24:return "CtrlHome"; case 0x23:return "CtrlEnd"; }
+            if (n != null) return "Ctrl"+n;
         }
+        // Shift só — teclas especiais; letras/dígitos vão para VkToChar
         if (shift && !ctrl && !alt && !win) {
             switch(vk) {
-                case 0x24:return "ShiftHome";      case 0x23:return "ShiftEnd";
-                case 0x21:return "ShiftPageUp";    case 0x22:return "ShiftPageDown";
-                case 0x25:return "ShiftArrowLeft"; case 0x26:return "ShiftArrowUp";
-                case 0x27:return "ShiftArrowRight";case 0x28:return "ShiftArrowDown";
-                case 0x09:return "ShiftTab";       case 0x2E:return "ShiftDelete";
+                case 0x24:return "ShiftHome";       case 0x23:return "ShiftEnd";
+                case 0x21:return "ShiftPgUp";       case 0x22:return "ShiftPgDn";
+                case 0x25:return "ShiftArrowLeft";  case 0x26:return "ShiftArrowUp";
+                case 0x27:return "ShiftArrowRight"; case 0x28:return "ShiftArrowDown";
+                case 0x09:return "ShiftTab";        case 0x2E:return "ShiftDel";
+                case 0x2D:return "ShiftIns";
             }
-            return null; // shift+letra → VkToChar trata como maiuscula
+            return null; // shift+letra/dígito → VkToChar (texto)
         }
+        // Sem modificadores — teclas de ação
         if (!ctrl&&!alt&&!win&&!shift) {
             switch(vk) {
                 case 0x0D:return "Enter";    case 0x08:return "Backspace"; case 0x2E:return "Delete";
                 case 0x24:return "Home";     case 0x23:return "End";       case 0x21:return "PageUp";
                 case 0x22:return "PageDown"; case 0x20:return "Space";     case 0x09:return "Tab";
+                case 0x1B:return "Escape";   case 0x2D:return "Insert";
                 case 0x25:return "ArrowLeft";case 0x26:return "ArrowUp";   case 0x27:return "ArrowRight"; case 0x28:return "ArrowDown";
                 case 0x70:return "F1";  case 0x71:return "F2";  case 0x72:return "F3";  case 0x73:return "F4";
                 case 0x74:return "F5";  case 0x75:return "F6";  case 0x76:return "F7";  case 0x77:return "F8";
@@ -343,6 +378,25 @@ function Save-RecordedMacro {
 }
 
 $script:macros = Load-Macros
+
+# Tabela nome-de-tecla → código VK (mesma convenção que VkName() no C#)
+$script:nameToVk = @{
+    'A'=0x41;'B'=0x42;'C'=0x43;'D'=0x44;'E'=0x45;'F'=0x46;'G'=0x47;'H'=0x48
+    'I'=0x49;'J'=0x4A;'K'=0x4B;'L'=0x4C;'M'=0x4D;'N'=0x4E;'O'=0x4F;'P'=0x50
+    'Q'=0x51;'R'=0x52;'S'=0x53;'T'=0x54;'U'=0x55;'V'=0x56;'W'=0x57;'X'=0x58
+    'Y'=0x59;'Z'=0x5A
+    'D0'=0x30;'D1'=0x31;'D2'=0x32;'D3'=0x33;'D4'=0x34
+    'D5'=0x35;'D6'=0x36;'D7'=0x37;'D8'=0x38;'D9'=0x39
+    'Num0'=0x60;'Num1'=0x61;'Num2'=0x62;'Num3'=0x63;'Num4'=0x64
+    'Num5'=0x65;'Num6'=0x66;'Num7'=0x67;'Num8'=0x68;'Num9'=0x69
+    'F1'=0x70;'F2'=0x71;'F3'=0x72;'F4'=0x73;'F5'=0x74;'F6'=0x75
+    'F7'=0x76;'F8'=0x77;'F9'=0x78;'F10'=0x79;'F11'=0x7A;'F12'=0x7B
+    'ArrowLeft'=0x25;'ArrowUp'=0x26;'ArrowRight'=0x27;'ArrowDown'=0x28
+    'Home'=0x24;'End'=0x23;'PgUp'=0x21;'PgDn'=0x22
+    'Ins'=0x2D;'Del'=0x2E;'Esc'=0x1B;'Tab'=0x09
+    'Space'=0x20;'Enter'=0x0D;'Back'=0x08
+    'NumMinus'=0x6D;'NumPlus'=0x6B;'NumMul'=0x6A;'NumDiv'=0x6F;'NumSep'=0x6C
+}
 
 
 # ============================================================
@@ -507,12 +561,22 @@ function Execute-Script {
             "CtrlShiftHome"   { [User32]::SendCtrlShift([User32]::VK_HOME) }
             "CtrlShiftEnd"    { [User32]::SendCtrlShift([User32]::VK_END) }
             default {
-                if ($action.Type -match '^CtrlShift([A-Z0-9])$') {
-                    [User32]::SendCtrlShift([byte][int][char]$Matches[1])
-                } elseif ($action.Type -match '^AltShift([0-9])$') {
-                    [User32]::SendAltShift([byte][int][char]$Matches[1])
-                } elseif ($action.Type -match '^Shift([A-Z])$') {
-                    [User32]::SendShift([byte][int][char]$Matches[1])
+                # Prefixos mais longos primeiro para evitar ambiguidade (CtrlAlt antes de Ctrl)
+                if ($action.Type -match '^(CtrlAlt|CtrlShift|AltShift|Win|Ctrl|Alt|Shift)(.+)$') {
+                    $mod = $Matches[1]; $key = $Matches[2]
+                    $vk  = $script:nameToVk[$key]
+                    if ($null -ne $vk) {
+                        $vkB = [byte]$vk
+                        switch ($mod) {
+                            'Win'       { [User32]::SendWinKey($vkB)    }
+                            'Alt'       { [User32]::SendAlt($vkB)       }
+                            'CtrlAlt'   { [User32]::SendCtrlAlt($vkB)   }
+                            'CtrlShift' { [User32]::SendCtrlShift($vkB) }
+                            'AltShift'  { [User32]::SendAltShift($vkB)  }
+                            'Ctrl'      { [User32]::SendCtrl($vkB)      }
+                            'Shift'     { [User32]::SendShift($vkB)     }
+                        }
+                    }
                 }
             }
         }
@@ -699,6 +763,17 @@ function Swap-DgvRows { param($a,$b)
     if($ctl.previewRow -eq $a){$ctl.previewRow=$b}elseif($ctl.previewRow -eq $b){$ctl.previewRow=$a}
 }
 
+function Apply-DgvZoom {
+    $sz = [Math]::Max(7, [Math]::Min(28, $script:recFontSize))
+    $dg = $script:recCtl.dgv; if ($null -eq $dg) { return }
+    $dg.DefaultCellStyle.Font                = New-Object System.Drawing.Font("Consolas", $sz, [System.Drawing.FontStyle]::Regular)
+    $dg.ColumnHeadersDefaultCellStyle.Font   = New-Object System.Drawing.Font("Consolas", $sz, [System.Drawing.FontStyle]::Bold)
+    $dg.AlternatingRowsDefaultCellStyle.Font = New-Object System.Drawing.Font("Consolas", $sz, [System.Drawing.FontStyle]::Regular)
+    $dg.RowTemplate.Height = [int]($sz * 2.4)
+    foreach ($r in $dg.Rows) { $r.Height = [int]($sz * 2.4) }
+    $dg.Refresh()
+}
+
 
 # ============================================================
 #  FORMULARIO GRAVADOR (abre em janela separada)
@@ -807,17 +882,31 @@ function Open-RecorderForm {
     $colType=New-Object System.Windows.Forms.DataGridViewComboBoxColumn
     $colType.Name="Type"; $colType.HeaderText="Tipo"; $colType.Width=140; $colType.SortMode="NotSortable"
     $colType.FlatStyle="Flat"; $colType.DisplayStyleForCurrentCellOnly=$true
-    @("Click","RightClick","MoveMouse","Delay","TypeText","Message",
-      "Enter","Backspace","Delete","Space","Tab","Home","End","PageUp","PageDown",
-      "ArrowUp","ArrowDown","ArrowLeft","ArrowRight",
-      "ShiftHome","ShiftEnd","ShiftArrowLeft","ShiftArrowRight","ShiftArrowUp","ShiftArrowDown","ShiftTab","ShiftDelete",
-      "CtrlA","CtrlC","CtrlV","CtrlX","CtrlZ","CtrlY","CtrlS","CtrlF","CtrlH","CtrlN","CtrlW","CtrlT","CtrlR",
-      "CtrlHome","CtrlEnd","CtrlPageUp","CtrlPageDown",
-      "CtrlShiftS","CtrlShiftV","CtrlShiftZ",
-      "CtrlShift1","CtrlShift2","CtrlShift3","CtrlShift4","CtrlShift5","CtrlShift6","CtrlShift7","CtrlShift8","CtrlShift9","CtrlShift0",
-      "AltShift1","AltShift2","AltShift3","AltShift4","AltShift5","AltShift6","AltShift7","AltShift8","AltShift9","AltShift0",
-      "AltTab","AltF4","WinR","WinArrowLeft","WinArrowRight","WinArrowUp","WinArrowDown",
-      "F1","F2","F3","F4","F5","F6","F7","F8","F10","F11","F12","Dash") | ForEach-Object { $colType.Items.Add($_) | Out-Null }
+    # ── Itens do ComboBox: acoes primeiro, hotkeys gerados alfabeticamente ──
+    $__fixedActions = @(
+        "Click","RightClick","MoveMouse","Delay","TypeText","Message",
+        "Enter","Backspace","Delete","Space","Tab","Escape","Insert",
+        "Home","End","PageUp","PageDown","ArrowUp","ArrowDown","ArrowLeft","ArrowRight",
+        "AltTab","AltF4","Dash",
+        "F1","F2","F3","F4","F5","F6","F7","F8","F10","F11","F12"
+    )
+    # Sufixos (nomes VkName) para gerar combinações com modificadores
+    $__ltrs   = [char[]]([char]'A'..[char]'Z') | ForEach-Object { [string]$_ }
+    $__digs   = 0..9 | ForEach-Object { "D$_" }
+    $__numkp  = 0..9 | ForEach-Object { "Num$_" }
+    $__fks    = 1..12 | ForEach-Object { "F$_" }
+    $__navs   = @("ArrowDown","ArrowLeft","ArrowRight","ArrowUp","Back","Del","End","Enter","Esc","Home","Ins","PgDn","PgUp","Space","Tab")
+    $__shnavs = @("ArrowDown","ArrowLeft","ArrowRight","ArrowUp","Del","End","Home","Ins","PgDn","PgUp","Tab")
+    $__allSfx = ($__ltrs + $__digs + $__numkp + $__fks + $__navs) | Sort-Object
+    $__hotkeys = [System.Collections.Generic.List[string]]::new()
+    foreach ($pfx in @("Alt","AltShift","Ctrl","CtrlAlt","CtrlShift","Win")) {
+        foreach ($sfx in $__allSfx) { $__hotkeys.Add("$pfx$sfx") }
+    }
+    foreach ($sfx in $__shnavs) { $__hotkeys.Add("Shift$sfx") }
+    foreach ($sfx in $__ltrs)   { $__hotkeys.Add("Shift$sfx") }
+    $__hotkeys.Sort()
+    $__fixedActions | ForEach-Object { $colType.Items.Add($_) | Out-Null }
+    $__hotkeys      | ForEach-Object { $colType.Items.Add($_) | Out-Null }
 
     $mkTxt = { param($n,$h,$w,$ro=$false)
         $c=New-Object System.Windows.Forms.DataGridViewTextBoxColumn
@@ -1104,23 +1193,12 @@ function Open-RecorderForm {
     })
 
     # ── Zoom de fonte com Ctrl+Roda ou Ctrl+Plus/Minus ────────────
-    $applyZoom = {
-        $sz=[Math]::Max(7,[Math]::Min(28,$script:recFontSize))
-        $dg=$script:recCtl.dgv
-        $dg.DefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$sz,[System.Drawing.FontStyle]::Regular)
-        $dg.ColumnHeadersDefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$sz,[System.Drawing.FontStyle]::Bold)
-        $dg.AlternatingRowsDefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$sz,[System.Drawing.FontStyle]::Regular)
-        $dg.RowTemplate.Height=[int]($sz*2.4)
-        # aplicar a todas as linhas existentes
-        foreach($r in $dg.Rows){ $r.Height=[int]($sz*2.4) }
-        $dg.Refresh()
-    }
     $rec.add_MouseWheel({
         param($s,$e)
         if(([System.Windows.Forms.Control]::ModifierKeys -band [System.Windows.Forms.Keys]::Control)){
             if($e.Delta -gt 0){ $script:recFontSize=[Math]::Min(28,$script:recFontSize+1) }
             else               { $script:recFontSize=[Math]::Max(7, $script:recFontSize-1) }
-            & $applyZoom
+            Apply-DgvZoom
         }
     })
     $dgv.add_MouseWheel({
@@ -1128,15 +1206,15 @@ function Open-RecorderForm {
         if(([System.Windows.Forms.Control]::ModifierKeys -band [System.Windows.Forms.Keys]::Control)){
             if($e.Delta -gt 0){ $script:recFontSize=[Math]::Min(28,$script:recFontSize+1) }
             else               { $script:recFontSize=[Math]::Max(7, $script:recFontSize-1) }
-            & $applyZoom
+            Apply-DgvZoom
         }
     })
     $rec.add_KeyDown({
         param($s,$e)
         if($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::Oemplus){
-            $script:recFontSize=[Math]::Min(28,$script:recFontSize+1); & $applyZoom; $e.SuppressKeyPress=$true
+            $script:recFontSize=[Math]::Min(28,$script:recFontSize+1); Apply-DgvZoom; $e.SuppressKeyPress=$true
         } elseif($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::OemMinus){
-            $script:recFontSize=[Math]::Max(7,$script:recFontSize-1);  & $applyZoom; $e.SuppressKeyPress=$true
+            $script:recFontSize=[Math]::Max(7,$script:recFontSize-1);  Apply-DgvZoom; $e.SuppressKeyPress=$true
         } elseif($e.KeyCode -eq [System.Windows.Forms.Keys]::F9 -and -not [MacroRecorder]::IsRecording){
             $script:recCtl.btnGravar.PerformClick(); $e.SuppressKeyPress=$true
         }
