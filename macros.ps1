@@ -648,98 +648,121 @@ function New-TitleBar($form, $title, $w) {
 # ============================================================
 
 function Open-RecorderForm {
-    param($parentComboBox)
+    param($parentComboBox, [string]$editMacroName = "")
     # ── Form ──────────────────────────────────────────────────────
     $rec = New-Object System.Windows.Forms.Form
-    $rec.Text = "MacroRecorder"; $rec.Size = New-Object System.Drawing.Size(540, 560)
+    $rec.Text = "MacroRecorder"; $rec.Size = New-Object System.Drawing.Size(820, 680)
     $rec.StartPosition = "CenterScreen"; $rec.FormBorderStyle = "None"; $rec.KeyPreview = $true
     $rec.BackColor = $cBg; $rec.ForeColor = $cText; $rec.Font = $font
     $rec.add_Paint({ param($s,$e) $pen=New-Object System.Drawing.Pen($cAccent,3); $e.Graphics.DrawRectangle($pen,1,1,($rec.Width-3),($rec.Height-3)); $pen.Dispose() })
-    New-TitleBar $rec "MacroRecorder" 540 | Out-Null
+    New-TitleBar $rec "MacroRecorder" 820 | Out-Null
 
     # ── Linha 1: Nome + Delay min + Status ────────────────────────
+    $fontMd = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Bold)
     $lblNome = New-Object System.Windows.Forms.Label
-    $lblNome.Text="Nome:"; $lblNome.Location=New-Object System.Drawing.Point(10,50); $lblNome.Size=New-Object System.Drawing.Size(48,18); $lblNome.ForeColor=$cAccent
+    $lblNome.Text="Nome:"; $lblNome.Location=New-Object System.Drawing.Point(10,50); $lblNome.Size=New-Object System.Drawing.Size(52,22); $lblNome.ForeColor=$cAccent; $lblNome.Font=$fontMd
     $rec.Controls.Add($lblNome)
     $txtNome = New-Object System.Windows.Forms.TextBox
-    $txtNome.Location=New-Object System.Drawing.Point(60,48); $txtNome.Size=New-Object System.Drawing.Size(240,20)
-    $txtNome.BackColor=$cSurface; $txtNome.ForeColor=$cText; $txtNome.BorderStyle="FixedSingle"; $txtNome.Text="Novo Macro"
+    $txtNome.Location=New-Object System.Drawing.Point(65,48); $txtNome.Size=New-Object System.Drawing.Size(360,22)
+    $txtNome.BackColor=$cSurface; $txtNome.ForeColor=$cText; $txtNome.BorderStyle="FixedSingle"; $txtNome.Font=$fontMd
+    $txtNome.Text = if($editMacroName) { $editMacroName } else { "Novo Macro" }
     $rec.Controls.Add($txtNome)
     $lblDly = New-Object System.Windows.Forms.Label
-    $lblDly.Text="Delay min:"; $lblDly.Location=New-Object System.Drawing.Point(308,50); $lblDly.Size=New-Object System.Drawing.Size(68,18); $lblDly.ForeColor=$cAccent
+    $lblDly.Text="Delay min:"; $lblDly.Location=New-Object System.Drawing.Point(435,51); $lblDly.Size=New-Object System.Drawing.Size(78,20); $lblDly.ForeColor=$cAccent; $lblDly.Font=$font
     $rec.Controls.Add($lblDly)
     $numDly = New-Object System.Windows.Forms.NumericUpDown
-    $numDly.Location=New-Object System.Drawing.Point(378,48); $numDly.Size=New-Object System.Drawing.Size(70,20)
-    $numDly.BackColor=$cSurface; $numDly.ForeColor=$cText; $numDly.Minimum=50; $numDly.Maximum=5000; $numDly.Increment=50; $numDly.Value=200
+    $numDly.Location=New-Object System.Drawing.Point(515,49); $numDly.Size=New-Object System.Drawing.Size(72,22)
+    $numDly.BackColor=$cSurface; $numDly.ForeColor=$cText; $numDly.Font=$font; $numDly.Minimum=50; $numDly.Maximum=5000; $numDly.Increment=50; $numDly.Value=200
     $rec.Controls.Add($numDly)
     $lblStatus = New-Object System.Windows.Forms.Label
-    $lblStatus.Text="Pronto. [F9] grava."; $lblStatus.Location=New-Object System.Drawing.Point(454,51); $lblStatus.Size=New-Object System.Drawing.Size(82,16)
-    $lblStatus.ForeColor=$cAccent; $lblStatus.Font=$fontSm
+    $lblStatus.Text="Pronto. [F9] grava."; $lblStatus.Location=New-Object System.Drawing.Point(593,51); $lblStatus.Size=New-Object System.Drawing.Size(220,20)
+    $lblStatus.ForeColor=$cAccent; $lblStatus.Font=$font
     $rec.Controls.Add($lblStatus)
 
     $sep1 = New-Object System.Windows.Forms.Panel
-    $sep1.Location=New-Object System.Drawing.Point(3,74); $sep1.Size=New-Object System.Drawing.Size(534,2); $sep1.BackColor=$cBorder
+    $sep1.Location=New-Object System.Drawing.Point(3,78); $sep1.Size=New-Object System.Drawing.Size(814,2); $sep1.BackColor=$cBorder
     $rec.Controls.Add($sep1)
 
     # ── Linha 2: Botões ───────────────────────────────────────────
-    $recBtnGravar  = New-FlatButton "GRAVAR [F9]"  5   81 108 26 $cGreen  $rec
-    $recBtnParar   = New-FlatButton "PARAR"        118  81 82  26 $cRed    $rec
-    $recBtnLimpar  = New-FlatButton "LIMPAR"       205  81 82  26 $cOrange $rec
-    $recBtnGuardar = New-FlatButton "GUARDAR"      292  81 100 26 $cPink   $rec
-    $recBtnAddDly  = New-FlatButton "+DELAY"       397  81 73  26 $cBorder $rec
-    $recBtnAddMsg  = New-FlatButton "+MSG"         475  81 61  26 $cBorder $rec
+    $recBtnGravar  = New-FlatButton "GRAVAR [F9]"  5   85 130 28 $cGreen  $rec
+    $recBtnParar   = New-FlatButton "PARAR"        140  85 90  28 $cRed    $rec
+    $recBtnLimpar  = New-FlatButton "LIMPAR"       235  85 90  28 $cOrange $rec
+    $recBtnGuardar = New-FlatButton "GUARDAR"      330  85 110 28 $cPink   $rec
+    $recBtnAddDly  = New-FlatButton "+DELAY"       445  85 90  28 $cBorder $rec
+    $recBtnAddMsg  = New-FlatButton "+MSG"         540  85 75  28 $cBorder $rec
+    $recBtnAddTyp  = New-FlatButton "+TEXTO"       620  85 80  28 $cBorder $rec
 
     $sep2 = New-Object System.Windows.Forms.Panel
-    $sep2.Location=New-Object System.Drawing.Point(3,113); $sep2.Size=New-Object System.Drawing.Size(534,2); $sep2.BackColor=$cBorder
+    $sep2.Location=New-Object System.Drawing.Point(3,119); $sep2.Size=New-Object System.Drawing.Size(814,2); $sep2.BackColor=$cBorder
     $rec.Controls.Add($sep2)
 
     $lblLog = New-Object System.Windows.Forms.Label
-    $lblLog.Text="Acoes capturadas  [duplo-clique p/ editar | clique-direito p/ opcoes | col X p/ apagar]"
-    $lblLog.Location=New-Object System.Drawing.Point(5,117); $lblLog.Size=New-Object System.Drawing.Size(530,16)
-    $lblLog.ForeColor=$cAccent; $lblLog.Font=$fontSm; $rec.Controls.Add($lblLog)
+    $lblLog.Text="Acoes  [editar direto na celula | clique-direito: inserir/apagar/mover | col X apaga linha]"
+    $lblLog.Location=New-Object System.Drawing.Point(5,123); $lblLog.Size=New-Object System.Drawing.Size(810,18)
+    $lblLog.ForeColor=$cAccent; $lblLog.Font=$font; $rec.Controls.Add($lblLog)
 
     # ── DataGridView ──────────────────────────────────────────────
     $dgv = New-Object System.Windows.Forms.DataGridView
-    $dgv.Location=New-Object System.Drawing.Point(3,135); $dgv.Size=New-Object System.Drawing.Size(534,415)
+    $dgv.Location=New-Object System.Drawing.Point(3,143); $dgv.Size=New-Object System.Drawing.Size(814,528)
+    $dgv.Dock="Bottom"
     $dgv.AllowUserToAddRows=$false; $dgv.AllowUserToDeleteRows=$false; $dgv.RowHeadersVisible=$false
-    $dgv.SelectionMode="FullRowSelect"; $dgv.MultiSelect=$false
+    $dgv.SelectionMode="FullRowSelect"; $dgv.MultiSelect=$false; $dgv.EditMode="EditOnKeystrokeOrF2"
     $dgv.BackgroundColor=$cSurface; $dgv.GridColor=$cBorder; $dgv.BorderStyle="None"; $dgv.EnableHeadersVisualStyles=$false
-    $dgv.DefaultCellStyle.BackColor=$cSurface; $dgv.DefaultCellStyle.ForeColor=$cText; $dgv.DefaultCellStyle.Font=$fontSm
-    $dgv.DefaultCellStyle.SelectionBackColor=[System.Drawing.Color]::FromArgb(60,98,224,239)
+    $cRowEven=[System.Drawing.Color]::FromArgb(14,14,34)
+    $cRowOdd =[System.Drawing.Color]::FromArgb(22,22,48)
+    $dgv.DefaultCellStyle.BackColor=$cRowEven; $dgv.DefaultCellStyle.ForeColor=$cText
+    $dgv.DefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",9,[System.Drawing.FontStyle]::Regular)
+    $dgv.DefaultCellStyle.SelectionBackColor=[System.Drawing.Color]::FromArgb(80,98,224,239)
     $dgv.DefaultCellStyle.SelectionForeColor=$cAccent
+    $dgv.AlternatingRowsDefaultCellStyle.BackColor=$cRowOdd
     $dgv.ColumnHeadersDefaultCellStyle.BackColor=$cBg; $dgv.ColumnHeadersDefaultCellStyle.ForeColor=$cAccent
-    $dgv.ColumnHeadersDefaultCellStyle.Font=$fontSm
-    $dgv.ColumnHeadersHeight=22; $dgv.ColumnHeadersHeightSizeMode="DisableResizing"; $dgv.RowTemplate.Height=20
+    $dgv.ColumnHeadersDefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",9,[System.Drawing.FontStyle]::Bold)
+    $dgv.ColumnHeadersHeight=24; $dgv.ColumnHeadersHeightSizeMode="DisableResizing"; $dgv.RowTemplate.Height=22
     $rec.Controls.Add($dgv)
 
-    # Colunas
-    $mkCol = { param($n,$h,$w,$ro=$false)
+    # Colunas — Type é ComboBox, resto TextBox
+    $colType=New-Object System.Windows.Forms.DataGridViewComboBoxColumn
+    $colType.Name="Type"; $colType.HeaderText="Tipo"; $colType.Width=140; $colType.SortMode="NotSortable"
+    $colType.FlatStyle="Flat"
+    @("Click","RightClick","MoveMouse","Delay","TypeText","Message",
+      "Enter","Backspace","Delete","Space","Tab","Home","End","PageUp","PageDown",
+      "ArrowUp","ArrowDown","ArrowLeft","ArrowRight",
+      "ShiftHome","ShiftEnd","ShiftArrowLeft","ShiftArrowRight","ShiftArrowUp","ShiftArrowDown","ShiftTab","ShiftDelete",
+      "CtrlA","CtrlC","CtrlV","CtrlX","CtrlZ","CtrlY","CtrlS","CtrlF","CtrlH","CtrlN","CtrlW","CtrlT","CtrlR",
+      "CtrlHome","CtrlEnd","CtrlPageUp","CtrlPageDown","CtrlShiftS","CtrlShiftV","CtrlShiftZ",
+      "AltTab","AltF4","WinR","WinArrowLeft","WinArrowRight","WinArrowUp","WinArrowDown",
+      "F1","F2","F3","F4","F5","F6","F7","F8","F10","F11","F12","Dash") | ForEach-Object { $colType.Items.Add($_) | Out-Null }
+
+    $mkTxt = { param($n,$h,$w,$ro=$false)
         $c=New-Object System.Windows.Forms.DataGridViewTextBoxColumn
         $c.Name=$n; $c.HeaderText=$h; $c.Width=$w; $c.ReadOnly=$ro; $c.SortMode="NotSortable"; return $c }
     $colDel=New-Object System.Windows.Forms.DataGridViewButtonColumn
-    $colDel.Name="Del"; $colDel.HeaderText=""; $colDel.Width=26; $colDel.Text="X"
+    $colDel.Name="Del"; $colDel.HeaderText=""; $colDel.Width=30; $colDel.Text="X"
     $colDel.UseColumnTextForButtonValue=$true; $colDel.SortMode="NotSortable"
+    $colDel.DefaultCellStyle.ForeColor=$cRed; $colDel.DefaultCellStyle.SelectionForeColor=$cRed
+
     $dgv.Columns.AddRange([System.Windows.Forms.DataGridViewColumn[]]@(
-        (& $mkCol "Type" "Tipo"       105 $true),
-        (& $mkCol "X"    "X"           42),
-        (& $mkCol "Y"    "Y"           42),
-        (& $mkCol "Ms"   "Ms"          55),
-        (& $mkCol "Text" "Texto / Msg" 200),
-        (& $mkCol "Load" "Load"        38),
+        $colType,
+        (& $mkTxt "X"    "X"       55),
+        (& $mkTxt "Y"    "Y"       55),
+        (& $mkTxt "Ms"   "Ms"      65),
+        (& $mkTxt "Text" "Texto"  200),
+        (& $mkTxt "Load" "Load"    50),
         $colDel
     ))
     $dgv.Columns["Text"].AutoSizeMode = "Fill"
 
     # ── Context menu ──────────────────────────────────────────────
     $ctxMenu = New-Object System.Windows.Forms.ContextMenuStrip
-    $ctxMenu.BackColor=$cBg; $ctxMenu.ForeColor=$cText; $ctxMenu.Font=$fontSm
+    $ctxMenu.BackColor=$cBg; $ctxMenu.ForeColor=$cText; $ctxMenu.Font=$font
     $miInsDelay = New-Object System.Windows.Forms.ToolStripMenuItem("+  Inserir Delay acima")
     $miInsMsg   = New-Object System.Windows.Forms.ToolStripMenuItem("+  Inserir Mensagem acima")
+    $miInsTyp   = New-Object System.Windows.Forms.ToolStripMenuItem("+  Inserir Texto acima")
     $miDelRow   = New-Object System.Windows.Forms.ToolStripMenuItem("X  Apagar linha")
     $miUp       = New-Object System.Windows.Forms.ToolStripMenuItem([char]0x25B2 + "  Subir")
     $miDown     = New-Object System.Windows.Forms.ToolStripMenuItem([char]0x25BC + "  Descer")
     $ctxMenu.Items.AddRange([System.Windows.Forms.ToolStripItem[]]@(
-        $miInsDelay, $miInsMsg,
+        $miInsDelay, $miInsMsg, $miInsTyp,
         (New-Object System.Windows.Forms.ToolStripSeparator),
         $miDelRow,
         (New-Object System.Windows.Forms.ToolStripSeparator),
@@ -747,7 +770,23 @@ function Open-RecorderForm {
     ))
     $dgv.ContextMenuStrip = $ctxMenu
 
-    # ── Estado global (evita problemas de scope com PS7 + closures) ──
+    # ── Helper: adicionar linha ao DGV ────────────────────────────
+    function Add-DgvRow {
+        param($dg, $type, $xv="", $yv="", $msv="", $txtv="", $ldv="")
+        $r = New-Object System.Windows.Forms.DataGridViewRow
+        $r.CreateCells($dg)
+        $r.Cells["Type"].Value = $type
+        $r.Cells["X"].Value   = $xv
+        $r.Cells["Y"].Value   = $yv
+        $r.Cells["Ms"].Value  = $msv
+        $r.Cells["Text"].Value= $txtv
+        $r.Cells["Load"].Value= $ldv
+        $r.Cells["Del"].Value = "X"
+        $dg.Rows.Add($r) | Out-Null
+        return $dg.Rows.Count - 1
+    }
+
+    # ── Estado global ──────────────────────────────────────────────
     $script:recCtl = @{
         dgv=         $dgv
         lblStatus=   $lblStatus
@@ -755,18 +794,33 @@ function Open-RecorderForm {
         numDly=      $numDly
         txtNome=     $txtNome
         parentCbo=   $parentComboBox
+        editName=    $editMacroName
         logCount=    0
         previewRow=  -1
         wasRecording=$false
         timerRec=    $null
     }
 
-    # ── Timer ─────────────────────────────────────────────────────
+    # ── Carregar macro existente para edição ─────────────────────
+    if ($editMacroName -and $script:macros[$editMacroName]) {
+        foreach ($action in $script:macros[$editMacroName]) {
+            $xv="";$yv="";$msv="";$txtv="";$ldv=""
+            switch ($action.Type) {
+                {$_ -in "Click","RightClick","MoveMouse"} { $xv=$action.X; $yv=$action.Y }
+                "Delay"    { $msv=$action.Milliseconds; $txtv=$action.Message; $ldv=$action.Load }
+                "TypeText" { $txtv=$action.Text }
+                "Message"  { $txtv=$action.Text }
+            }
+            Add-DgvRow $dgv $action.Type $xv $yv $msv $txtv $ldv | Out-Null
+        }
+        $lblStatus.Text="A editar: $editMacroName"; $lblStatus.ForeColor=$cOrange
+    }
+
+    # ── Timer (lê acções novas durante gravação) ──────────────────
     $timerRec = New-Object System.Windows.Forms.Timer; $timerRec.Interval=150
     $timerRec.add_Tick({
         $ctl=$script:recCtl; if($null -eq $ctl){return}
         $dg=$ctl.dgv
-        # Novos ActionJsonLines → linhas no grid
         $total=[MacroRecorder]::ActionJsonLines.Count
         while($ctl.logCount -lt $total){
             try {
@@ -779,30 +833,30 @@ function Open-RecorderForm {
                     "Message" {$txtv=$action.Text}
                 }
                 if($ctl.previewRow -ge 0 -and $ctl.previewRow -lt $dg.Rows.Count){
+                    # Substitui linha de preview TypeText...
                     $r=$dg.Rows[$ctl.previewRow]
                     $r.Cells["Type"].Value=$action.Type;$r.Cells["X"].Value=$xv;$r.Cells["Y"].Value=$yv
                     $r.Cells["Ms"].Value=$msv;$r.Cells["Text"].Value=$txtv;$r.Cells["Load"].Value=$ldv
                     $ctl.previewRow=-1
                 } else {
-                    $dg.Rows.Add($action.Type,$xv,$yv,$msv,$txtv,$ldv,"X") | Out-Null
+                    Add-DgvRow $dg $action.Type $xv $yv $msv $txtv $ldv | Out-Null
+                    if($dg.Rows.Count -gt 0){$dg.FirstDisplayedScrollingRowIndex=$dg.Rows.Count-1}
                 }
-                if($dg.Rows.Count -gt 0){$dg.FirstDisplayedScrollingRowIndex=$dg.Rows.Count-1}
             } catch {}
             $ctl.logCount++
         }
-        # Preview de texto em digitação
+        # Preview digitação em curso
         $preview=[MacroRecorder]::TextPreview
         if($preview -ne ""){
-            $preview=$preview -replace '^> ',''
+            $preview=$preview -replace '^>\s*',''
             if($ctl.previewRow -lt 0){
-                $dg.Rows.Add("TypeText...","","","",($preview),"","X") | Out-Null
+                Add-DgvRow $dg "TypeText" "" "" "" $preview "" | Out-Null
                 $ctl.previewRow=$dg.Rows.Count-1
-                if($dg.Rows.Count -gt 0){$dg.FirstDisplayedScrollingRowIndex=$dg.Rows.Count-1}
+                $dg.FirstDisplayedScrollingRowIndex=$dg.Rows.Count-1
             } else {
-                $dg.Rows[$ctl.previewRow].Cells["Text"].Value=$preview
+                try{$dg.Rows[$ctl.previewRow].Cells["Text"].Value=$preview}catch{}
             }
         }
-        # Detecção de paragem via F9 (C# hook)
         if($ctl.wasRecording -and -not [MacroRecorder]::IsRecording){
             $ctl.wasRecording=$false
             $ctl.lblStatus.Text="Parado. $([MacroRecorder]::ActionLog.Count) acoes."
@@ -813,58 +867,87 @@ function Open-RecorderForm {
     })
     $script:recCtl.timerRec=$timerRec
 
-    # ── Botão X na coluna Del ─────────────────────────────────────
+    # ── Delete row helper (inline, sem scope issues) ──────────────
+    function Remove-DgvRow { param($ri)
+        $ctl=$script:recCtl; $dg=$ctl.dgv
+        $dg.Rows.RemoveAt($ri); $dg.Refresh()
+        if($ri -lt $ctl.previewRow){$ctl.previewRow--}
+        elseif($ri -eq $ctl.previewRow){$ctl.previewRow=-1}
+    }
+    function Insert-DgvRow { param($type, $idx)
+        $ctl=$script:recCtl; $dg=$ctl.dgv
+        $r=New-Object System.Windows.Forms.DataGridViewRow; $r.CreateCells($dg)
+        $r.Cells["Type"].Value=$type; $r.Cells["Del"].Value="X"
+        if($type -eq "Delay"){$r.Cells["Ms"].Value="500";$r.Cells["Load"].Value="0"}
+        $dg.Rows.Insert($idx,$r); $dg.Refresh()
+        if($ctl.previewRow -ge $idx){$ctl.previewRow++}
+        $focusCol=if($type -eq "Delay"){"Ms"}elseif($type -in "TypeText","Message"){"Text"}else{"Type"}
+        try{$dg.CurrentCell=$dg.Rows[$idx].Cells[$focusCol]}catch{}
+    }
+    function Swap-DgvRows { param($a,$b)
+        $ctl=$script:recCtl; $dg=$ctl.dgv; $n=$dg.Columns.Count-1
+        $va=0..($n-1)|ForEach-Object{$dg.Rows[$a].Cells[$_].Value}
+        $vb=0..($n-1)|ForEach-Object{$dg.Rows[$b].Cells[$_].Value}
+        for($c=0;$c-lt$n;$c++){$dg.Rows[$a].Cells[$c].Value=$vb[$c];$dg.Rows[$b].Cells[$c].Value=$va[$c]}
+        $dg.Refresh()
+        if($ctl.previewRow -eq $a){$ctl.previewRow=$b}elseif($ctl.previewRow -eq $b){$ctl.previewRow=$a}
+    }
+
+    # ── Botão X (coluna Del) ──────────────────────────────────────
     $dgv.add_CellClick({
         param($s,$e)
-        if($e.RowIndex -ge 0 -and $e.ColumnIndex -ge 0 -and $dgv.Columns[$e.ColumnIndex].Name -eq "Del"){
-            $ri=$e.RowIndex; $dgv.Rows.RemoveAt($ri)
-            $ctl=$script:recCtl
-            if($ctl){if($ri -lt $ctl.previewRow){$ctl.previewRow--}elseif($ri -eq $ctl.previewRow){$ctl.previewRow=-1}}
+        $dg=$script:recCtl.dgv; if($null -eq $dg){return}
+        if($e.RowIndex -ge 0 -and $e.ColumnIndex -ge 0 -and $e.ColumnIndex -lt $dg.Columns.Count){
+            if($dg.Columns[$e.ColumnIndex].Name -eq "Del"){ Remove-DgvRow $e.RowIndex }
         }
     })
 
-    # ── Helpers inline para context menu ──────────────────────────
-    $doInsert = {
-        param($type)
-        $idx=if($dgv.CurrentRow){$dgv.CurrentRow.Index}else{$dgv.Rows.Count}
-        $newRow=New-Object System.Windows.Forms.DataGridViewRow; $newRow.CreateCells($dgv)
-        $newRow.Cells[0].Value=$type
-        if($type -eq "Delay"){$newRow.Cells[3].Value="500";$newRow.Cells[5].Value="0"}
-        $newRow.Cells[6].Value="X"
-        $dgv.Rows.Insert($idx,$newRow)
-        $ctl=$script:recCtl; if($ctl -and $ctl.previewRow -ge $idx){$ctl.previewRow++}
-        try{$focusCol=if($type -eq "Delay"){"Ms"}else{"Text"}; $dgv.CurrentCell=$dgv.Rows[$idx].Cells[$focusCol]}catch{}
-    }
-    $doSwap = {
-        param($a,$b)
-        $n=$dgv.Columns.Count-1
-        $va=0..($n-1)|ForEach-Object{$dgv.Rows[$a].Cells[$_].Value}
-        $vb=0..($n-1)|ForEach-Object{$dgv.Rows[$b].Cells[$_].Value}
-        for($c=0;$c -lt $n;$c++){$dgv.Rows[$a].Cells[$c].Value=$vb[$c];$dgv.Rows[$b].Cells[$c].Value=$va[$c]}
-        $ctl=$script:recCtl
-        if($ctl){if($ctl.previewRow -eq $a){$ctl.previewRow=$b}elseif($ctl.previewRow -eq $b){$ctl.previewRow=$a}}
-    }
-
-    $miInsDelay.add_Click({ & $doInsert "Delay" })
-    $miInsMsg.add_Click({   & $doInsert "Message" })
+    # ── Context menu ──────────────────────────────────────────────
+    $miInsDelay.add_Click({
+        $dg=$script:recCtl.dgv; $idx=if($dg.CurrentRow){$dg.CurrentRow.Index}else{$dg.Rows.Count}
+        Insert-DgvRow "Delay" $idx
+    })
+    $miInsMsg.add_Click({
+        $dg=$script:recCtl.dgv; $idx=if($dg.CurrentRow){$dg.CurrentRow.Index}else{$dg.Rows.Count}
+        Insert-DgvRow "Message" $idx
+    })
+    $miInsTyp.add_Click({
+        $dg=$script:recCtl.dgv; $idx=if($dg.CurrentRow){$dg.CurrentRow.Index}else{$dg.Rows.Count}
+        Insert-DgvRow "TypeText" $idx
+    })
     $miDelRow.add_Click({
-        if($dgv.CurrentRow -and $dgv.CurrentRow.Index -ge 0){
-            $ri=$dgv.CurrentRow.Index; $dgv.Rows.RemoveAt($ri)
-            $ctl=$script:recCtl
-            if($ctl){if($ri -lt $ctl.previewRow){$ctl.previewRow--}elseif($ri -eq $ctl.previewRow){$ctl.previewRow=-1}}
-        }
+        $dg=$script:recCtl.dgv
+        if($dg.CurrentRow -and $dg.CurrentRow.Index -ge 0){ Remove-DgvRow $dg.CurrentRow.Index }
     })
     $miUp.add_Click({
-        $idx=if($dgv.CurrentRow){$dgv.CurrentRow.Index}else{-1}
-        if($idx -le 0){return}
-        & $doSwap $idx ($idx-1)
-        try{$dgv.CurrentCell=$dgv.Rows[$idx-1].Cells[0]}catch{}
+        $dg=$script:recCtl.dgv; $idx=if($dg.CurrentRow){$dg.CurrentRow.Index}else{-1}
+        if($idx -le 0){return}; Swap-DgvRows $idx ($idx-1)
+        try{$dg.CurrentCell=$dg.Rows[$idx-1].Cells[0]}catch{}
     })
     $miDown.add_Click({
-        $idx=if($dgv.CurrentRow){$dgv.CurrentRow.Index}else{-1}
-        if($idx -lt 0 -or $idx -ge $dgv.Rows.Count-1){return}
-        & $doSwap $idx ($idx+1)
-        try{$dgv.CurrentCell=$dgv.Rows[$idx+1].Cells[0]}catch{}
+        $dg=$script:recCtl.dgv; $idx=if($dg.CurrentRow){$dg.CurrentRow.Index}else{-1}
+        if($idx -lt 0 -or $idx -ge $dg.Rows.Count-1){return}; Swap-DgvRows $idx ($idx+1)
+        try{$dg.CurrentCell=$dg.Rows[$idx+1].Cells[0]}catch{}
+    })
+
+    # ── Botões +DELAY / +MSG / +TEXTO ─────────────────────────────
+    $recBtnAddDly.add_Click({
+        $dg=$script:recCtl.dgv
+        Add-DgvRow $dg "Delay" "" "" "500" "" "0" | Out-Null; $dg.Refresh()
+        $li=$dg.Rows.Count-1; $dg.FirstDisplayedScrollingRowIndex=$li
+        try{$dg.CurrentCell=$dg.Rows[$li].Cells["Ms"]}catch{}
+    })
+    $recBtnAddMsg.add_Click({
+        $dg=$script:recCtl.dgv
+        Add-DgvRow $dg "Message" | Out-Null; $dg.Refresh()
+        $li=$dg.Rows.Count-1; $dg.FirstDisplayedScrollingRowIndex=$li
+        try{$dg.CurrentCell=$dg.Rows[$li].Cells["Text"]}catch{}
+    })
+    $recBtnAddTyp.add_Click({
+        $dg=$script:recCtl.dgv
+        Add-DgvRow $dg "TypeText" | Out-Null; $dg.Refresh()
+        $li=$dg.Rows.Count-1; $dg.FirstDisplayedScrollingRowIndex=$li
+        try{$dg.CurrentCell=$dg.Rows[$li].Cells["Text"]}catch{}
     })
 
     # ── Botão GRAVAR ──────────────────────────────────────────────
@@ -876,8 +959,7 @@ function Open-RecorderForm {
         [MacroRecorder]::OnStop=[Action]{}
         [MacroRecorder]::Start([int]$ctl.numDly.Value)
         $ctl.wasRecording=$true
-        $ctl.lblStatus.Text="A gravar... [F9] para parar"
-        $ctl.lblStatus.ForeColor=$cGreen
+        $ctl.lblStatus.Text="A gravar... [F9] para parar"; $ctl.lblStatus.ForeColor=$cGreen
         $ctl.btnGravar.ForeColor=$cRed;$ctl.btnGravar.FlatAppearance.BorderColor=$cRed
         $ctl.btnGravar.Text="A GRAVAR..."
     })
@@ -887,10 +969,8 @@ function Open-RecorderForm {
         [MacroRecorder]::Stop()
         $ctl=$script:recCtl; if(-not $ctl){return}
         $ctl.wasRecording=$false
-        $ctl.lblStatus.Text="Parado. $([MacroRecorder]::ActionLog.Count) acoes."
-        $ctl.lblStatus.ForeColor=$cOrange
-        $ctl.btnGravar.ForeColor=$cGreen;$ctl.btnGravar.FlatAppearance.BorderColor=$cGreen
-        $ctl.btnGravar.Text="GRAVAR [F9]"
+        $ctl.lblStatus.Text="Parado. $([MacroRecorder]::ActionLog.Count) acoes."; $ctl.lblStatus.ForeColor=$cOrange
+        $ctl.btnGravar.ForeColor=$cGreen;$ctl.btnGravar.FlatAppearance.BorderColor=$cGreen; $ctl.btnGravar.Text="GRAVAR [F9]"
     })
 
     # ── Botão LIMPAR ──────────────────────────────────────────────
@@ -900,28 +980,7 @@ function Open-RecorderForm {
         $ctl=$script:recCtl; if(-not $ctl){return}
         $ctl.dgv.Rows.Clear();$ctl.logCount=0;$ctl.previewRow=-1;$ctl.wasRecording=$false
         $ctl.lblStatus.Text="Limpo."; $ctl.lblStatus.ForeColor=$cAccent
-        $ctl.btnGravar.ForeColor=$cGreen;$ctl.btnGravar.FlatAppearance.BorderColor=$cGreen
-        $ctl.btnGravar.Text="GRAVAR [F9]"
-    })
-
-    # ── Botão +DELAY ──────────────────────────────────────────────
-    $recBtnAddDly.add_Click({
-        $ctl=$script:recCtl; if(-not $ctl){return}
-        $newRow=New-Object System.Windows.Forms.DataGridViewRow; $newRow.CreateCells($ctl.dgv)
-        $newRow.Cells[0].Value="Delay";$newRow.Cells[3].Value="500";$newRow.Cells[5].Value="0";$newRow.Cells[6].Value="X"
-        $ctl.dgv.Rows.Add($newRow) | Out-Null
-        $li=$ctl.dgv.Rows.Count-1; $ctl.dgv.FirstDisplayedScrollingRowIndex=$li
-        try{$ctl.dgv.CurrentCell=$ctl.dgv.Rows[$li].Cells["Ms"]}catch{}
-    })
-
-    # ── Botão +MSG ────────────────────────────────────────────────
-    $recBtnAddMsg.add_Click({
-        $ctl=$script:recCtl; if(-not $ctl){return}
-        $newRow=New-Object System.Windows.Forms.DataGridViewRow; $newRow.CreateCells($ctl.dgv)
-        $newRow.Cells[0].Value="Message";$newRow.Cells[6].Value="X"
-        $ctl.dgv.Rows.Add($newRow) | Out-Null
-        $li=$ctl.dgv.Rows.Count-1; $ctl.dgv.FirstDisplayedScrollingRowIndex=$li
-        try{$ctl.dgv.CurrentCell=$ctl.dgv.Rows[$li].Cells["Text"]}catch{}
+        $ctl.btnGravar.ForeColor=$cGreen;$ctl.btnGravar.FlatAppearance.BorderColor=$cGreen; $ctl.btnGravar.Text="GRAVAR [F9]"
     })
 
     # ── Botão GUARDAR ─────────────────────────────────────────────
@@ -932,13 +991,16 @@ function Open-RecorderForm {
         $nome=$ctl.txtNome.Text.Trim()
         if(-not $nome){$ctl.lblStatus.Text="Introduz um nome.";return}
         if($ctl.dgv.Rows.Count -eq 0){$ctl.lblStatus.Text="Nenhuma acao gravada.";return}
-        # Reconstruir ActionJsonLines a partir do grid editado
+        # Reconstruir JSON a partir do grid (inclui edições manuais)
         [MacroRecorder]::ActionJsonLines.Clear()
         foreach($row in $ctl.dgv.Rows){
             $type=$row.Cells["Type"].Value
-            if([string]::IsNullOrEmpty($type) -or $type -like "TypeText...*"){continue}
-            $xv=$row.Cells["X"].Value;  $yv=$row.Cells["Y"].Value
-            $msv=$row.Cells["Ms"].Value;$txtv=$row.Cells["Text"].Value;$ldv=$row.Cells["Load"].Value
+            if([string]::IsNullOrEmpty($type)){continue}
+            $xv  ="$($row.Cells['X'].Value)"
+            $yv  ="$($row.Cells['Y'].Value)"
+            $msv ="$($row.Cells['Ms'].Value)"
+            $txtv="$($row.Cells['Text'].Value)"
+            $ldv ="$($row.Cells['Load'].Value)"
             $jline=$null
             if($type -in "Click","RightClick","MoveMouse"){
                 $xi=if($xv -match '^-?\d+$'){[int]$xv}else{0}
@@ -947,27 +1009,36 @@ function Open-RecorderForm {
             } elseif($type -eq "Delay"){
                 $mi=if($msv -match '^\d+$'){[int]$msv}else{0}
                 $li=if($ldv -match '^\d+$'){[int]$ldv}else{0}
-                $te=if($txtv){$txtv.Replace('\','\\').Replace('"','\"')}else{''}
+                $te=$txtv.Replace('\','\\').Replace('"','\"')
                 $jline='{"Type":"Delay","Milliseconds":'+$mi+',"Message":"'+$te+'","Load":'+$li+'}'
             } elseif($type -eq "TypeText"){
-                $te=if($txtv){$txtv.Replace('\','\\').Replace('"','\"')}else{''}
+                $te=$txtv.Replace('\','\\').Replace('"','\"')
                 $jline='{"Type":"TypeText","Text":"'+$te+'"}'
             } elseif($type -eq "Message"){
-                $te=if($txtv){$txtv.Replace('\','\\').Replace('"','\"')}else{''}
+                $te=$txtv.Replace('\','\\').Replace('"','\"')
                 $jline='{"Type":"Message","Text":"'+$te+'"}'
             } else {
                 $jline='{"Type":"'+$type+'"}'
             }
-            if($jline){[MacroRecorder]::ActionJsonLines.Add($jline) | Out-Null}
+            if($jline){[MacroRecorder]::ActionJsonLines.Add($jline)|Out-Null}
+        }
+        # Se estiver a editar macro existente: apagar ficheiro antigo primeiro
+        if($ctl.editName){
+            $oldFile=Get-ChildItem $script:macrosFolder -Filter "*.json" | Where-Object {
+                try{(Get-Content $_.FullName -Raw|ConvertFrom-Json).name -eq $ctl.editName}catch{$false}
+            } | Select-Object -First 1
+            if($oldFile){ Remove-Item $oldFile.FullName -Force }
         }
         $ok=Save-RecordedMacro -name $nome
         if($ok){
+            $ctl.editName=$nome
             $script:macros=Load-Macros
             $ctl.parentCbo.Items.Clear()
-            foreach($k in $script:macros.Keys){$ctl.parentCbo.Items.Add($k) | Out-Null}
+            foreach($k in $script:macros.Keys){$ctl.parentCbo.Items.Add($k)|Out-Null}
+            if($ctl.parentCbo.Items.Contains($nome)){$ctl.parentCbo.SelectedItem=$nome}
             $ctl.lblStatus.Text="Guardado: $nome"; $ctl.lblStatus.ForeColor=$cGreen
             [MacroRecorder]::ActionLog.Clear();[MacroRecorder]::ActionJsonLines.Clear()
-            $ctl.dgv.Rows.Clear();$ctl.logCount=0;$ctl.previewRow=-1
+            $ctl.logCount=0;$ctl.previewRow=-1
         } else {$ctl.lblStatus.Text="Erro ao guardar."}
     })
 
@@ -982,10 +1053,8 @@ function Open-RecorderForm {
     # ── FormClosing ───────────────────────────────────────────────
     $rec.add_FormClosing({
         [MacroRecorder]::Stop()
-        if($script:recCtl){
-            $script:recCtl.wasRecording=$false
-            $script:recCtl.timerRec.Stop()
-        }
+        $ctl=$script:recCtl
+        if($ctl){ $ctl.wasRecording=$false; $ctl.timerRec.Stop() }
         $script:recCtl=$null
     })
 
@@ -1025,12 +1094,13 @@ $sep1.Location=New-Object System.Drawing.Point(3,76); $sep1.Size=New-Object Syst
 $form.Controls.Add($sep1)
 
 # Row 1: botoes de acao
-$btnPlay    = New-FlatButton "PLAY"   5   83 91 28 $cGreen  $form
-$btnPause   = New-FlatButton "PAUSA" 100  83 91 28 $cOrange $form
-$btnStop    = New-FlatButton "STOP"  195  83 91 28 $cRed    $form
-$btnGravar  = New-FlatButton "GRAVAR" 290 83 91 28 $cPink   $form
-$btnPasta   = New-FlatButton "PASTA" 385  83 91 28 $cAccent $form
-$btnRefresh = New-FlatButton "○"     479  83 18 28 $cBorder $form
+$btnPlay    = New-FlatButton "PLAY"    5   83 76 28 $cGreen  $form
+$btnPause   = New-FlatButton "PAUSA"  85   83 76 28 $cOrange $form
+$btnStop    = New-FlatButton "STOP"   165  83 66 28 $cRed    $form
+$btnGravar  = New-FlatButton "GRAVAR" 235  83 76 28 $cPink   $form
+$btnEditar  = New-FlatButton "EDITAR" 315  83 76 28 $cAccent $form
+$btnPasta   = New-FlatButton "PASTA"  395  83 66 28 $cBorder $form
+$btnRefresh = New-FlatButton ([char]0x21BA + "") 465 83 28 28 $cBorder $form
 
 # Row 2: loop / repeat — linha separada para nao sobrepor os botoes
 $chkLoop = New-Object System.Windows.Forms.CheckBox
@@ -1080,6 +1150,13 @@ $btnPlay.add_Click({
 $btnPause.add_Click({ Toggle-Pause })
 $btnStop.add_Click({ Stop-Macro })
 $btnGravar.add_Click({ Open-RecorderForm -parentComboBox $comboBox })
+$btnEditar.add_Click({
+    if ($script:selectedMacro) {
+        Open-RecorderForm -parentComboBox $comboBox -editMacroName $script:selectedMacro
+    } else {
+        $outputBox.AppendText("Escolhe um macro para editar.`n")
+    }
+})
 $btnPasta.add_Click({
     $path = $script:macrosFolder
     if (Test-Path $path) { Start-Process explorer.exe -ArgumentList "`"$path`"" }
