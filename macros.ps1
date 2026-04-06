@@ -764,13 +764,33 @@ function Swap-DgvRows { param($a,$b)
 }
 
 function Apply-DgvZoom {
-    $sz = [Math]::Max(7, [Math]::Min(28, $script:recFontSize))
-    $dg = $script:recCtl.dgv; if ($null -eq $dg) { return }
-    $dg.DefaultCellStyle.Font                = New-Object System.Drawing.Font("Consolas", $sz, [System.Drawing.FontStyle]::Regular)
-    $dg.ColumnHeadersDefaultCellStyle.Font   = New-Object System.Drawing.Font("Consolas", $sz, [System.Drawing.FontStyle]::Bold)
-    $dg.AlternatingRowsDefaultCellStyle.Font = New-Object System.Drawing.Font("Consolas", $sz, [System.Drawing.FontStyle]::Regular)
+    $sz  = [Math]::Max(7, [Math]::Min(28, $script:recFontSize))
+    $ctl = $script:recCtl; if ($null -eq $ctl) { return }
+    $dg  = $ctl.dgv;        if ($null -eq $dg)  { return }
+
+    $fnReg  = New-Object System.Drawing.Font("Consolas", $sz, [System.Drawing.FontStyle]::Regular)
+    $fnBold = New-Object System.Drawing.Font("Consolas", $sz, [System.Drawing.FontStyle]::Bold)
+
+    # ── Grid ─────────────────────────────────────────────────────
+    $dg.DefaultCellStyle.Font                = $fnReg
+    $dg.ColumnHeadersDefaultCellStyle.Font   = $fnBold
+    $dg.AlternatingRowsDefaultCellStyle.Font = $fnReg
     $dg.RowTemplate.Height = [int]($sz * 2.4)
     foreach ($r in $dg.Rows) { $r.Height = [int]($sz * 2.4) }
+
+    # ── Cabeçalho (painel de botões + labels) ────────────────────
+    $pnl = $ctl.pnlTop
+    if ($null -ne $pnl -and $null -ne $ctl.hdrLayout) {
+        $ratio = $sz / 10.0
+        foreach ($item in $ctl.hdrLayout) {
+            $c = $item.ctrl
+            $c.Location = New-Object System.Drawing.Point([int]($item.ox * $ratio), [int]($item.oy * $ratio))
+            $c.Size     = New-Object System.Drawing.Size([int]($item.ow * $ratio),  [int]($item.oh * $ratio))
+            if ($c -isnot [System.Windows.Forms.Panel]) { $c.Font = $fnBold }
+        }
+        $pnl.Height = [int]($ctl.pnlTopBase * $ratio)
+    }
+
     $dg.Refresh()
 }
 
@@ -799,7 +819,7 @@ function Open-RecorderForm {
     $pnlTop = New-Object System.Windows.Forms.Panel
     $pnlTop.Dock = "Top"; $pnlTop.Height = 120
     $pnlTop.BackColor = $cBg
-    $rec.Controls.Add($pnlTop)
+    # NÃO adicionar ao form aqui — DGV tem de ser adicionado primeiro (Z-order correto)
 
     # ── Linha 1: Nome + Delay min + Status + Coords ───────────────
     $fontMd = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Bold)
@@ -876,7 +896,12 @@ function Open-RecorderForm {
     $dgv.ColumnHeadersDefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$script:recFontSize,[System.Drawing.FontStyle]::Bold)
     $dgv.ColumnHeadersHeight=26; $dgv.ColumnHeadersHeightSizeMode="DisableResizing"
     $dgv.RowTemplate.Height=[int]($script:recFontSize * 2.4)
+    # DGV adicionado ANTES do pnlTop para que o docking funcione corretamente:
+    # WinForms processa docking de baixo para cima (último adicionado = processado primeiro).
+    # pnlTop (Dock=Top) adicionado depois → fica no índice mais alto → processado primeiro → ocupa o topo
+    # dgv   (Dock=Fill) adicionado antes  → fica no índice 0 → processado por último → preenche o resto
     $rec.Controls.Add($dgv)
+    $rec.Controls.Add($pnlTop)
 
     # Colunas — Type é ComboBox, resto TextBox
     $colType=New-Object System.Windows.Forms.DataGridViewComboBoxColumn
@@ -948,6 +973,11 @@ function Open-RecorderForm {
     $dgv.add_DataError({ param($s,$e) $e.Cancel=$true; $e.ThrowException=$false })
 
     # ── Estado global ──────────────────────────────────────────────
+    # Capturar layout original do cabeçalho para rescalar com o zoom
+    $__hdrLayout = [System.Collections.Generic.List[hashtable]]::new()
+    foreach ($__c in $pnlTop.Controls) {
+        $__hdrLayout.Add(@{ ctrl=$__c; ox=$__c.Location.X; oy=$__c.Location.Y; ow=$__c.Size.Width; oh=$__c.Size.Height })
+    }
     $script:recCtl = @{
         dgv=         $dgv
         lblStatus=   $lblStatus
@@ -960,6 +990,9 @@ function Open-RecorderForm {
         previewRow=  -1
         wasRecording=$false
         timerRec=    $null
+        pnlTop=      $pnlTop
+        hdrLayout=   $__hdrLayout
+        pnlTopBase=  120
     }
 
     # ── Carregar macro existente para edição ─────────────────────
