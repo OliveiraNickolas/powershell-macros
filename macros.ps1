@@ -706,75 +706,101 @@ function Swap-DgvRows { param($a,$b)
 
 function Open-RecorderForm {
     param($parentComboBox, [string]$editMacroName = "")
+
+    # ── Font size state ───────────────────────────────────────────
+    $script:recFontSize = 10.0
+
     # ── Form ──────────────────────────────────────────────────────
     $rec = New-Object System.Windows.Forms.Form
-    $rec.Text = "MacroRecorder"; $rec.Size = New-Object System.Drawing.Size(820, 680)
-    $rec.StartPosition = "CenterScreen"; $rec.FormBorderStyle = "None"; $rec.KeyPreview = $true
+    $rec.Text = "MacroRecorder"
+    $rec.Size = New-Object System.Drawing.Size(1100, 750)
+    $rec.MinimumSize = New-Object System.Drawing.Size(700, 500)
+    $rec.StartPosition = "CenterScreen"
+    $rec.FormBorderStyle = "Sizable"    # redimensionável nativo
+    $rec.KeyPreview = $true
     $rec.BackColor = $cBg; $rec.ForeColor = $cText; $rec.Font = $font
-    $rec.add_Paint({ param($s,$e) $pen=New-Object System.Drawing.Pen($cAccent,3); $e.Graphics.DrawRectangle($pen,1,1,($rec.Width-3),($rec.Height-3)); $pen.Dispose() })
-    New-TitleBar $rec "MacroRecorder" 820 | Out-Null
 
-    # ── Linha 1: Nome + Delay min + Status ────────────────────────
+    # ── Painel de cabeçalho fixo (não cresce com resize) ──────────
+    $pnlTop = New-Object System.Windows.Forms.Panel
+    $pnlTop.Dock = "Top"; $pnlTop.Height = 120
+    $pnlTop.BackColor = $cBg
+    $rec.Controls.Add($pnlTop)
+
+    # ── Linha 1: Nome + Delay min + Status + Coords ───────────────
     $fontMd = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Bold)
     $lblNome = New-Object System.Windows.Forms.Label
-    $lblNome.Text="Nome:"; $lblNome.Location=New-Object System.Drawing.Point(10,50); $lblNome.Size=New-Object System.Drawing.Size(52,22); $lblNome.ForeColor=$cAccent; $lblNome.Font=$fontMd
-    $rec.Controls.Add($lblNome)
+    $lblNome.Text="Nome:"; $lblNome.Location=New-Object System.Drawing.Point(8,10); $lblNome.Size=New-Object System.Drawing.Size(52,22); $lblNome.ForeColor=$cAccent; $lblNome.Font=$fontMd
+    $pnlTop.Controls.Add($lblNome)
     $txtNome = New-Object System.Windows.Forms.TextBox
-    $txtNome.Location=New-Object System.Drawing.Point(65,48); $txtNome.Size=New-Object System.Drawing.Size(360,22)
+    $txtNome.Location=New-Object System.Drawing.Point(63,8); $txtNome.Size=New-Object System.Drawing.Size(340,22)
     $txtNome.BackColor=$cSurface; $txtNome.ForeColor=$cText; $txtNome.BorderStyle="FixedSingle"; $txtNome.Font=$fontMd
     $txtNome.Text = if($editMacroName) { $editMacroName } else { "Novo Macro" }
-    $rec.Controls.Add($txtNome)
+    $pnlTop.Controls.Add($txtNome)
     $lblDly = New-Object System.Windows.Forms.Label
-    $lblDly.Text="Delay min:"; $lblDly.Location=New-Object System.Drawing.Point(435,51); $lblDly.Size=New-Object System.Drawing.Size(78,20); $lblDly.ForeColor=$cAccent; $lblDly.Font=$font
-    $rec.Controls.Add($lblDly)
+    $lblDly.Text="Delay min:"; $lblDly.Location=New-Object System.Drawing.Point(412,11); $lblDly.Size=New-Object System.Drawing.Size(75,20); $lblDly.ForeColor=$cAccent; $lblDly.Font=$font
+    $pnlTop.Controls.Add($lblDly)
     $numDly = New-Object System.Windows.Forms.NumericUpDown
-    $numDly.Location=New-Object System.Drawing.Point(515,49); $numDly.Size=New-Object System.Drawing.Size(72,22)
+    $numDly.Location=New-Object System.Drawing.Point(490,9); $numDly.Size=New-Object System.Drawing.Size(72,22)
     $numDly.BackColor=$cSurface; $numDly.ForeColor=$cText; $numDly.Font=$font; $numDly.Minimum=50; $numDly.Maximum=5000; $numDly.Increment=50; $numDly.Value=200
-    $rec.Controls.Add($numDly)
+    $pnlTop.Controls.Add($numDly)
     $lblStatus = New-Object System.Windows.Forms.Label
-    $lblStatus.Text="Pronto. [F9] grava."; $lblStatus.Location=New-Object System.Drawing.Point(593,51); $lblStatus.Size=New-Object System.Drawing.Size(220,20)
+    $lblStatus.Text="Pronto. [F9] grava."; $lblStatus.Location=New-Object System.Drawing.Point(570,11); $lblStatus.Size=New-Object System.Drawing.Size(300,20)
     $lblStatus.ForeColor=$cAccent; $lblStatus.Font=$font
-    $rec.Controls.Add($lblStatus)
+    $pnlTop.Controls.Add($lblStatus)
+
+    # Visor de coordenadas do rato
+    $lblCoords = New-Object System.Windows.Forms.Label
+    $lblCoords.Text="X: 0   Y: 0"
+    $lblCoords.Location=New-Object System.Drawing.Point(875,11); $lblCoords.Size=New-Object System.Drawing.Size(200,20)
+    $lblCoords.ForeColor=$cGreen; $lblCoords.Font=New-Object System.Drawing.Font("Consolas",9,[System.Drawing.FontStyle]::Bold)
+    $pnlTop.Controls.Add($lblCoords)
 
     $sep1 = New-Object System.Windows.Forms.Panel
-    $sep1.Location=New-Object System.Drawing.Point(3,78); $sep1.Size=New-Object System.Drawing.Size(814,2); $sep1.BackColor=$cBorder
-    $rec.Controls.Add($sep1)
+    $sep1.Location=New-Object System.Drawing.Point(0,36); $sep1.Size=New-Object System.Drawing.Size(2000,2); $sep1.BackColor=$cBorder
+    $pnlTop.Controls.Add($sep1)
 
     # ── Linha 2: Botões ───────────────────────────────────────────
-    $recBtnGravar  = New-FlatButton "GRAVAR [F9]"  5   85 130 28 $cGreen  $rec
-    $recBtnParar   = New-FlatButton "PARAR"        140  85 90  28 $cRed    $rec
-    $recBtnLimpar  = New-FlatButton "LIMPAR"       235  85 90  28 $cOrange $rec
-    $recBtnGuardar = New-FlatButton "GUARDAR"      330  85 110 28 $cPink   $rec
-    $recBtnAddDly  = New-FlatButton "+DELAY"       445  85 90  28 $cBorder $rec
-    $recBtnAddMsg  = New-FlatButton "+MSG"         540  85 75  28 $cBorder $rec
-    $recBtnAddTyp  = New-FlatButton "+TEXTO"       620  85 80  28 $cBorder $rec
+    $recBtnGravar  = New-FlatButton "GRAVAR [F9]"  5   45 130 28 $cGreen  $pnlTop
+    $recBtnParar   = New-FlatButton "PARAR"        140  45 90  28 $cRed    $pnlTop
+    $recBtnLimpar  = New-FlatButton "LIMPAR"       235  45 90  28 $cOrange $pnlTop
+    $recBtnGuardar = New-FlatButton "GUARDAR"      330  45 110 28 $cPink   $pnlTop
+    $recBtnAddDly  = New-FlatButton "+DELAY"       445  45 85  28 $cBorder $pnlTop
+    $recBtnAddMsg  = New-FlatButton "+MSG"         535  45 70  28 $cBorder $pnlTop
+    $recBtnAddTyp  = New-FlatButton "+TEXTO"       610  45 75  28 $cBorder $pnlTop
+
+    # Ctrl+Roda / Ctrl+Plus / Ctrl+Minus → dica
+    $lblZoom = New-Object System.Windows.Forms.Label
+    $lblZoom.Text="Ctrl+Roda: zoom fonte"
+    $lblZoom.Location=New-Object System.Drawing.Point(695,52); $lblZoom.Size=New-Object System.Drawing.Size(200,18)
+    $lblZoom.ForeColor=$cBorder; $lblZoom.Font=New-Object System.Drawing.Font("Consolas",7,[System.Drawing.FontStyle]::Regular)
+    $pnlTop.Controls.Add($lblZoom)
 
     $sep2 = New-Object System.Windows.Forms.Panel
-    $sep2.Location=New-Object System.Drawing.Point(3,119); $sep2.Size=New-Object System.Drawing.Size(814,2); $sep2.BackColor=$cBorder
-    $rec.Controls.Add($sep2)
+    $sep2.Location=New-Object System.Drawing.Point(0,78); $sep2.Size=New-Object System.Drawing.Size(2000,2); $sep2.BackColor=$cBorder
+    $pnlTop.Controls.Add($sep2)
 
     $lblLog = New-Object System.Windows.Forms.Label
-    $lblLog.Text="Acoes  [editar direto na celula | clique-direito: inserir/apagar/mover | col X apaga linha]"
-    $lblLog.Location=New-Object System.Drawing.Point(5,123); $lblLog.Size=New-Object System.Drawing.Size(810,18)
-    $lblLog.ForeColor=$cAccent; $lblLog.Font=$font; $rec.Controls.Add($lblLog)
+    $lblLog.Text="Acoes  [editar direto | clique-direito: inserir/apagar/mover | col X apaga | Ctrl+Roda=zoom]"
+    $lblLog.Location=New-Object System.Drawing.Point(5,83); $lblLog.Size=New-Object System.Drawing.Size(1080,18)
+    $lblLog.ForeColor=$cAccent; $lblLog.Font=$font; $pnlTop.Controls.Add($lblLog)
 
-    # ── DataGridView ──────────────────────────────────────────────
+    # ── DataGridView (cresce com a janela) ────────────────────────
     $dgv = New-Object System.Windows.Forms.DataGridView
-    $dgv.Location=New-Object System.Drawing.Point(3,143); $dgv.Size=New-Object System.Drawing.Size(814,528)
-    $dgv.Dock="Bottom"
+    $dgv.Dock = "Fill"
     $dgv.AllowUserToAddRows=$false; $dgv.AllowUserToDeleteRows=$false; $dgv.RowHeadersVisible=$false
     $dgv.SelectionMode="FullRowSelect"; $dgv.MultiSelect=$false; $dgv.EditMode="EditOnKeystrokeOrF2"
     $dgv.BackgroundColor=$cSurface; $dgv.GridColor=$cBorder; $dgv.BorderStyle="None"; $dgv.EnableHeadersVisualStyles=$false
     $cRowEven=[System.Drawing.Color]::FromArgb(14,14,34)
     $cRowOdd =[System.Drawing.Color]::FromArgb(22,22,48)
     $dgv.DefaultCellStyle.BackColor=$cRowEven; $dgv.DefaultCellStyle.ForeColor=$cText
-    $dgv.DefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",9,[System.Drawing.FontStyle]::Regular)
+    $dgv.DefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$script:recFontSize,[System.Drawing.FontStyle]::Regular)
     $dgv.DefaultCellStyle.SelectionBackColor=[System.Drawing.Color]::FromArgb(80,98,224,239)
     $dgv.DefaultCellStyle.SelectionForeColor=$cAccent
     $dgv.AlternatingRowsDefaultCellStyle.BackColor=$cRowOdd
     $dgv.ColumnHeadersDefaultCellStyle.BackColor=$cBg; $dgv.ColumnHeadersDefaultCellStyle.ForeColor=$cAccent
-    $dgv.ColumnHeadersDefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",9,[System.Drawing.FontStyle]::Bold)
-    $dgv.ColumnHeadersHeight=24; $dgv.ColumnHeadersHeightSizeMode="DisableResizing"; $dgv.RowTemplate.Height=22
+    $dgv.ColumnHeadersDefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$script:recFontSize,[System.Drawing.FontStyle]::Bold)
+    $dgv.ColumnHeadersHeight=26; $dgv.ColumnHeadersHeightSizeMode="DisableResizing"
+    $dgv.RowTemplate.Height=[int]($script:recFontSize * 2.4)
     $rec.Controls.Add($dgv)
 
     # Colunas — Type é ComboBox, resto TextBox
@@ -1070,15 +1096,69 @@ function Open-RecorderForm {
         }
     })
 
-    # ── FormClosing ───────────────────────────────────────────────
+    # ── Timer de coordenadas do rato ─────────────────────────────
+    $timerCoords = New-Object System.Windows.Forms.Timer; $timerCoords.Interval=50
+    $timerCoords.add_Tick({
+        $p=[System.Windows.Forms.Cursor]::Position
+        $script:recCtl.lblCoords.Text="X: $($p.X)   Y: $($p.Y)"
+    })
+
+    # ── Zoom de fonte com Ctrl+Roda ou Ctrl+Plus/Minus ────────────
+    $applyZoom = {
+        $sz=[Math]::Max(7,[Math]::Min(28,$script:recFontSize))
+        $dg=$script:recCtl.dgv
+        $dg.DefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$sz,[System.Drawing.FontStyle]::Regular)
+        $dg.ColumnHeadersDefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$sz,[System.Drawing.FontStyle]::Bold)
+        $dg.AlternatingRowsDefaultCellStyle.Font=New-Object System.Drawing.Font("Consolas",$sz,[System.Drawing.FontStyle]::Regular)
+        $dg.RowTemplate.Height=[int]($sz*2.4)
+        # aplicar a todas as linhas existentes
+        foreach($r in $dg.Rows){ $r.Height=[int]($sz*2.4) }
+        $dg.Refresh()
+    }
+    $rec.add_MouseWheel({
+        param($s,$e)
+        if(([System.Windows.Forms.Control]::ModifierKeys -band [System.Windows.Forms.Keys]::Control)){
+            if($e.Delta -gt 0){ $script:recFontSize=[Math]::Min(28,$script:recFontSize+1) }
+            else               { $script:recFontSize=[Math]::Max(7, $script:recFontSize-1) }
+            & $applyZoom
+        }
+    })
+    $dgv.add_MouseWheel({
+        param($s,$e)
+        if(([System.Windows.Forms.Control]::ModifierKeys -band [System.Windows.Forms.Keys]::Control)){
+            if($e.Delta -gt 0){ $script:recFontSize=[Math]::Min(28,$script:recFontSize+1) }
+            else               { $script:recFontSize=[Math]::Max(7, $script:recFontSize-1) }
+            & $applyZoom
+        }
+    })
+    $rec.add_KeyDown({
+        param($s,$e)
+        if($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::Oemplus){
+            $script:recFontSize=[Math]::Min(28,$script:recFontSize+1); & $applyZoom; $e.SuppressKeyPress=$true
+        } elseif($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::OemMinus){
+            $script:recFontSize=[Math]::Max(7,$script:recFontSize-1);  & $applyZoom; $e.SuppressKeyPress=$true
+        } elseif($e.KeyCode -eq [System.Windows.Forms.Keys]::F9 -and -not [MacroRecorder]::IsRecording){
+            $script:recCtl.btnGravar.PerformClick(); $e.SuppressKeyPress=$true
+        }
+    })
+
+    # Guardar refs adicionais no recCtl
+    $script:recCtl.lblCoords   = $lblCoords
+    $script:recCtl.timerCoords = $timerCoords
+
+    $timerRec.Start()
+    $timerCoords.Start()
+
     $rec.add_FormClosing({
         [MacroRecorder]::Stop()
         $ctl=$script:recCtl
-        if($ctl){ $ctl.wasRecording=$false; $ctl.timerRec.Stop() }
+        if($ctl){
+            $ctl.wasRecording=$false
+            $ctl.timerRec.Stop()
+            $ctl.timerCoords.Stop()
+        }
         $script:recCtl=$null
     })
-
-    $timerRec.Start()
     $rec.Show()
 }
 # ── fim Open-RecorderForm ─────────────────────────────────────────
