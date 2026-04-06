@@ -1,0 +1,8 @@
+{
+  "name": "AntiOff",
+  "order": 13,
+  "actions": [
+    { "Type": "Delay", "Milliseconds": 10000, "Message": "", "Load": 0 },
+    { "Type": "Click", "X": 1922, "Y": 243 }
+  ]
+}
