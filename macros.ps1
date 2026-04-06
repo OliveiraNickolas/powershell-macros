@@ -69,7 +69,8 @@ public class User32 {
     public static void SendWinKey(byte key)           { keybd_event(VK_LWIN,0,0,0); keybd_event(key,0,0,0); keybd_event(key,0,KEYEVENTF_KEYUP,0); keybd_event(VK_LWIN,0,KEYEVENTF_KEYUP,0); }
     public static void SendAltTab()  { keybd_event(VK_MENU,0,0,0); keybd_event(0x09,0,0,0); keybd_event(0x09,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); }
     public static void SendAltF4()   { keybd_event(VK_MENU,0,0,0); keybd_event(VK_F4,0,0,0); keybd_event(VK_F4,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); }
-    public static void SendShift(byte vk) { keybd_event(VK_SHIFT,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_SHIFT,0,KEYEVENTF_KEYUP,0); }
+    public static void SendShift(byte vk)    { keybd_event(VK_SHIFT,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_SHIFT,0,KEYEVENTF_KEYUP,0); }
+    public static void SendAltShift(byte vk) { keybd_event(VK_MENU,0,0,0); keybd_event(VK_SHIFT,0,0,0); keybd_event(vk,0,0,0); keybd_event(vk,0,KEYEVENTF_KEYUP,0); keybd_event(VK_SHIFT,0,KEYEVENTF_KEYUP,0); keybd_event(VK_MENU,0,KEYEVENTF_KEYUP,0); }
 }
 "@ }
 
@@ -208,12 +209,16 @@ public class MacroRecorder {
         if (win && !ctrl && !alt) {
             switch(vk) { case 0x25:return "WinArrowLeft"; case 0x26:return "WinArrowUp"; case 0x27:return "WinArrowRight"; case 0x28:return "WinArrowDown"; case 0x52:return "WinR"; }
         }
-        if (alt && !ctrl && !win) {
+        if (alt && shift && !ctrl && !win) {
+            if (vk>=0x30&&vk<=0x39) return "AltShift"+(char)vk;  // Alt+Shift+0..9 (fila superior)
+        }
+        if (alt && !ctrl && !shift && !win) {
             if (vk==0x73) return "AltF4";
             if (vk==0x09) return "AltTab";
         }
         if (ctrl && shift && !alt && !win) {
             if (vk>=0x41&&vk<=0x5A) return "CtrlShift"+(char)vk;
+            if (vk>=0x30&&vk<=0x39) return "CtrlShift"+(char)vk;  // Ctrl+Shift+0..9 (fila superior)
             switch(vk) { case 0x24:return "CtrlShiftHome"; case 0x23:return "CtrlShiftEnd"; }
         }
         if (ctrl && !alt && !shift && !win) {
@@ -502,8 +507,10 @@ function Execute-Script {
             "CtrlShiftHome"   { [User32]::SendCtrlShift([User32]::VK_HOME) }
             "CtrlShiftEnd"    { [User32]::SendCtrlShift([User32]::VK_END) }
             default {
-                if ($action.Type -match '^CtrlShift([A-Z])$') {
+                if ($action.Type -match '^CtrlShift([A-Z0-9])$') {
                     [User32]::SendCtrlShift([byte][int][char]$Matches[1])
+                } elseif ($action.Type -match '^AltShift([0-9])$') {
+                    [User32]::SendAltShift([byte][int][char]$Matches[1])
                 } elseif ($action.Type -match '^Shift([A-Z])$') {
                     [User32]::SendShift([byte][int][char]$Matches[1])
                 }
@@ -648,19 +655,12 @@ function New-TitleBar($form, $title, $w) {
 # ============================================================
 
 function Add-DgvRow {
+    # Colunas: 0=Type 1=X 2=Y 3=Ms 4=Text 5=Load 6=Del
+    # Usar índices numéricos — acesso por nome só funciona após inserção no grid
     param($dg, $type, $xv="", $yv="", $msv="", $txtv="", $ldv="")
-    $r = New-Object System.Windows.Forms.DataGridViewRow
-    $r.CreateCells($dg)
-    $r.Cells["Type"].Value = $type
-    $r.Cells["X"].Value    = $xv
-    $r.Cells["Y"].Value    = $yv
-    $r.Cells["Ms"].Value   = $msv
-    $r.Cells["Text"].Value = $txtv
-    $r.Cells["Load"].Value = $ldv
-    $r.Cells["Del"].Value  = "X"
-    $dg.Rows.Add($r) | Out-Null
+    $idx = $dg.Rows.Add($type, $xv, $yv, $msv, $txtv, $ldv, "X")
     $dg.Refresh()
-    return $dg.Rows.Count - 1
+    return $idx
 }
 
 function Remove-DgvRow { param($ri)
@@ -672,13 +672,22 @@ function Remove-DgvRow { param($ri)
 
 function Insert-DgvRow { param($type, $idx)
     $ctl=$script:recCtl; $dg=$ctl.dgv
-    $r=New-Object System.Windows.Forms.DataGridViewRow; $r.CreateCells($dg)
-    $r.Cells["Type"].Value=$type; $r.Cells["Del"].Value="X"
-    if($type -eq "Delay"){$r.Cells["Ms"].Value="500";$r.Cells["Load"].Value="0"}
-    $dg.Rows.Insert($idx,$r); $dg.Refresh()
+    # Inserir via Add (no fim) depois mover para posição correcta
+    $ms=""; $ld=""
+    if($type -eq "Delay"){$ms="500";$ld="0"}
+    $newIdx = $dg.Rows.Add($type,"","", $ms,"", $ld,"X")
+    # Mover a row inserida no fim para $idx
+    if($newIdx -ne $idx){
+        $values = 0..6 | ForEach-Object { $dg.Rows[$newIdx].Cells[$_].Value }
+        $dg.Rows.RemoveAt($newIdx)
+        $r=New-Object System.Windows.Forms.DataGridViewRow; $r.CreateCells($dg)
+        for($c=0;$c -lt 7;$c++){$r.Cells[$c].Value=$values[$c]}
+        $dg.Rows.Insert($idx,$r)
+    }
+    $dg.Refresh()
     if($ctl.previewRow -ge $idx){$ctl.previewRow++}
-    $focusCol=if($type -eq "Delay"){"Ms"}elseif($type -in "TypeText","Message"){"Text"}else{"Type"}
-    try{$dg.CurrentCell=$dg.Rows[$idx].Cells[$focusCol]}catch{}
+    $focusColIdx=if($type -eq "Delay"){3}elseif($type -in "TypeText","Message"){4}else{0}
+    try{$dg.CurrentCell=$dg.Rows[$idx].Cells[$focusColIdx]}catch{}
 }
 
 function Swap-DgvRows { param($a,$b)
@@ -771,13 +780,16 @@ function Open-RecorderForm {
     # Colunas — Type é ComboBox, resto TextBox
     $colType=New-Object System.Windows.Forms.DataGridViewComboBoxColumn
     $colType.Name="Type"; $colType.HeaderText="Tipo"; $colType.Width=140; $colType.SortMode="NotSortable"
-    $colType.FlatStyle="Flat"
+    $colType.FlatStyle="Flat"; $colType.DisplayStyleForCurrentCellOnly=$true
     @("Click","RightClick","MoveMouse","Delay","TypeText","Message",
       "Enter","Backspace","Delete","Space","Tab","Home","End","PageUp","PageDown",
       "ArrowUp","ArrowDown","ArrowLeft","ArrowRight",
       "ShiftHome","ShiftEnd","ShiftArrowLeft","ShiftArrowRight","ShiftArrowUp","ShiftArrowDown","ShiftTab","ShiftDelete",
       "CtrlA","CtrlC","CtrlV","CtrlX","CtrlZ","CtrlY","CtrlS","CtrlF","CtrlH","CtrlN","CtrlW","CtrlT","CtrlR",
-      "CtrlHome","CtrlEnd","CtrlPageUp","CtrlPageDown","CtrlShiftS","CtrlShiftV","CtrlShiftZ",
+      "CtrlHome","CtrlEnd","CtrlPageUp","CtrlPageDown",
+      "CtrlShiftS","CtrlShiftV","CtrlShiftZ",
+      "CtrlShift1","CtrlShift2","CtrlShift3","CtrlShift4","CtrlShift5","CtrlShift6","CtrlShift7","CtrlShift8","CtrlShift9","CtrlShift0",
+      "AltShift1","AltShift2","AltShift3","AltShift4","AltShift5","AltShift6","AltShift7","AltShift8","AltShift9","AltShift0",
       "AltTab","AltF4","WinR","WinArrowLeft","WinArrowRight","WinArrowUp","WinArrowDown",
       "F1","F2","F3","F4","F5","F6","F7","F8","F10","F11","F12","Dash") | ForEach-Object { $colType.Items.Add($_) | Out-Null }
 
@@ -817,6 +829,8 @@ function Open-RecorderForm {
         $miUp, $miDown
     ))
     $dgv.ContextMenuStrip = $ctxMenu
+    # Suprimir erros de valor fora da lista do ComboBox (compatibilidade com tipos antigos)
+    $dgv.add_DataError({ param($s,$e) $e.Cancel=$true; $e.ThrowException=$false })
 
     # ── Estado global ──────────────────────────────────────────────
     $script:recCtl = @{
