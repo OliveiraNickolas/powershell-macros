@@ -839,9 +839,9 @@ function Open-RecorderForm {
     $recBtnParar   = New-FlatButton "PARAR"        140  45 90  28 $cRed    $pnlTop
     $recBtnLimpar  = New-FlatButton "LIMPAR"       235  45 90  28 $cOrange $pnlTop
     $recBtnGuardar = New-FlatButton "GUARDAR"      330  45 110 28 $cPink   $pnlTop
-    $recBtnAddDly  = New-FlatButton "+DELAY"       445  45 85  28 $cBorder $pnlTop
-    $recBtnAddMsg  = New-FlatButton "+MSG"         535  45 70  28 $cBorder $pnlTop
-    $recBtnAddTyp  = New-FlatButton "+TEXTO"       610  45 75  28 $cBorder $pnlTop
+    $recBtnAddDly  = New-FlatButton "[+] DELAY"    445  45 85  28 $cBorder $pnlTop
+    $recBtnAddMsg  = New-FlatButton "[+] MSG"      535  45 70  28 $cBorder $pnlTop
+    $recBtnAddTyp  = New-FlatButton "[+] TEXTO"    610  45 75  28 $cBorder $pnlTop
 
     # Ctrl+Roda / Ctrl+Plus / Ctrl+Minus → dica
     $lblZoom = New-Object System.Windows.Forms.Label
@@ -855,7 +855,7 @@ function Open-RecorderForm {
     $pnlTop.Controls.Add($sep2)
 
     $lblLog = New-Object System.Windows.Forms.Label
-    $lblLog.Text="Acoes  [editar direto | clique-direito: inserir/apagar/mover | col X apaga | Ctrl+Roda=zoom]"
+    $lblLog.Text="Ações  [Clique triplo: Editar célula | Clique-direito: Inserir/apagar/mover | Coluna X: Deletar linha | Ctrl+Roda do mouse: Zoom]"
     $lblLog.Location=New-Object System.Drawing.Point(5,83); $lblLog.Size=New-Object System.Drawing.Size(1080,18)
     $lblLog.ForeColor=$cAccent; $lblLog.Font=$font; $pnlTop.Controls.Add($lblLog)
 
