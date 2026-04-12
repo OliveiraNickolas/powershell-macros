@@ -368,12 +368,12 @@ function Save-RecordedMacro {
     if ([MacroRecorder]::ActionJsonLines.Count -eq 0) { return $false }
     $order    = Get-NextOrder
     $jsonBody = "[" + ([MacroRecorder]::ActionJsonLines -join ",") + "]"
-    $actions  = $jsonBody | ConvertFrom-Json
-    $data     = [ordered]@{ name = $name; order = $order; actions = $actions }
     $safe     = $name -replace '[\\/:*?"<>|]', '_'
     $filename = "{0:D3}_{1}.json" -f $order, $safe
     $filepath = Join-Path $script:macrosFolder $filename
-    $data | ConvertTo-Json -Depth 10 | Out-File $filepath -Encoding UTF8 -Force
+    $escapedName = $name -replace '\\', '\\' -replace '"', '\"'
+    $finalJson = '{"name":"' + $escapedName + '","order":' + $order + ',"actions":' + $jsonBody + '}'
+    $finalJson | Out-File $filepath -Encoding UTF8 -Force
     return $true
 }
 
