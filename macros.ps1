@@ -1276,148 +1276,6 @@ function Open-RecorderForm {
 
 
 # ============================================================
-#  FORMULARIO GERIR MACROS (reordenar e renomear)
-# ============================================================
-
-function Open-ManageForm {
-    param($parentComboBox)
-
-    $mgr = New-Object System.Windows.Forms.Form
-    $mgr.Text = "Gerir Macros"
-    $mgr.Size = New-Object System.Drawing.Size(500, 520)
-    $mgr.StartPosition = "CenterScreen"
-    $mgr.FormBorderStyle = "None"
-    $mgr.BackColor = $cBg; $mgr.ForeColor = $cText; $mgr.Font = $font
-    $mgrRef = $mgr
-    $mgr.add_Paint({
-        param($s,$e)
-        $pen = New-Object System.Drawing.Pen($cAccent, 3)
-        $e.Graphics.DrawRectangle($pen, 1, 1, ($mgrRef.Width-3), ($mgrRef.Height-3))
-        $pen.Dispose()
-    }.GetNewClosure())
-
-    New-TitleBar $mgr "Gerir Macros" 500 | Out-Null
-
-    $lblInfo = New-Object System.Windows.Forms.Label
-    $lblInfo.Text = "Duplo-clique para renomear  |  ↑↓ para reordenar  |  GUARDAR para aplicar"
-    $lblInfo.Location = New-Object System.Drawing.Point(8, 50)
-    $lblInfo.Size = New-Object System.Drawing.Size(480, 18)
-    $lblInfo.ForeColor = $cAccent; $lblInfo.Font = $font
-    $mgr.Controls.Add($lblInfo)
-
-    $dgv = New-Object System.Windows.Forms.DataGridView
-    $dgv.Location = New-Object System.Drawing.Point(8, 74)
-    $dgv.Size = New-Object System.Drawing.Size(406, 400)
-    $dgv.AllowUserToAddRows = $false; $dgv.AllowUserToDeleteRows = $false
-    $dgv.RowHeadersVisible = $false
-    $dgv.SelectionMode = "FullRowSelect"; $dgv.MultiSelect = $false
-    $dgv.EditMode = "EditOnDoubleClick"
-    $dgv.BackgroundColor = $cSurface; $dgv.GridColor = $cBorder
-    $dgv.BorderStyle = "None"; $dgv.EnableHeadersVisualStyles = $false
-    $dgv.DefaultCellStyle.BackColor = [System.Drawing.Color]::FromArgb(14,14,34)
-    $dgv.DefaultCellStyle.ForeColor = $cText
-    $dgv.DefaultCellStyle.Font = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Regular)
-    $dgv.DefaultCellStyle.SelectionBackColor = [System.Drawing.Color]::FromArgb(80,98,224,239)
-    $dgv.DefaultCellStyle.SelectionForeColor = $cAccent
-    $dgv.AlternatingRowsDefaultCellStyle.BackColor = [System.Drawing.Color]::FromArgb(22,22,48)
-    $dgv.ColumnHeadersDefaultCellStyle.BackColor = $cBg
-    $dgv.ColumnHeadersDefaultCellStyle.ForeColor = $cAccent
-    $dgv.ColumnHeadersDefaultCellStyle.Font = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold)
-    $dgv.ColumnHeadersHeight = 26; $dgv.ColumnHeadersHeightSizeMode = "DisableResizing"
-    $dgv.RowTemplate.Height = 30
-    $mgr.Controls.Add($dgv)
-
-    $colOrig = New-Object System.Windows.Forms.DataGridViewTextBoxColumn
-    $colOrig.Name = "OrigName"; $colOrig.HeaderText = "OrigName"; $colOrig.Visible = $false; $colOrig.ReadOnly = $true
-    $dgv.Columns.Add($colOrig) | Out-Null
-
-    $colName = New-Object System.Windows.Forms.DataGridViewTextBoxColumn
-    $colName.Name = "Nome"; $colName.HeaderText = "Nome do Macro"; $colName.AutoSizeMode = "Fill"
-    $dgv.Columns.Add($colName) | Out-Null
-
-    $files = Get-ChildItem $script:macrosFolder -Filter "*.json" -ErrorAction SilentlyContinue |
-             Sort-Object { try { [int](Get-Content $_.FullName -Raw | ConvertFrom-Json).order } catch { 999 } }
-    foreach ($f in $files) {
-        try {
-            $d = Get-Content $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
-            $dgv.Rows.Add($d.name, $d.name) | Out-Null
-        } catch {}
-    }
-    if ($dgv.Rows.Count -gt 0) {
-        $dgv.Rows[0].Selected = $true
-        $dgv.CurrentCell = $dgv.Rows[0].Cells["Nome"]
-    }
-
-    $btnUp    = New-FlatButton "↑"       418  74  72 48 $cAccent $mgr
-    $btnDn    = New-FlatButton "↓"       418 126  72 48 $cAccent $mgr
-    $btnSave  = New-FlatButton "GUARDAR" 418 340  72 34 $cGreen  $mgr
-    $btnClose = New-FlatButton "FECHAR"  418 378  72 34 $cRed    $mgr
-
-    $dgvRef = $dgv
-    $cboRef = $parentComboBox
-
-    $btnUp.add_Click({
-        if ($dgvRef.SelectedRows.Count -eq 0) { return }
-        $i = $dgvRef.SelectedRows[0].Index
-        if ($i -le 0) { return }
-        $ao = $dgvRef.Rows[$i-1].Cells["OrigName"].Value; $an = $dgvRef.Rows[$i-1].Cells["Nome"].Value
-        $bo = $dgvRef.Rows[$i  ].Cells["OrigName"].Value; $bn = $dgvRef.Rows[$i  ].Cells["Nome"].Value
-        $dgvRef.Rows[$i-1].Cells["OrigName"].Value = $bo; $dgvRef.Rows[$i-1].Cells["Nome"].Value = $bn
-        $dgvRef.Rows[$i  ].Cells["OrigName"].Value = $ao; $dgvRef.Rows[$i  ].Cells["Nome"].Value = $an
-        $dgvRef.ClearSelection(); $dgvRef.Rows[$i-1].Selected = $true
-        $dgvRef.CurrentCell = $dgvRef.Rows[$i-1].Cells["Nome"]
-    }.GetNewClosure())
-
-    $btnDn.add_Click({
-        if ($dgvRef.SelectedRows.Count -eq 0) { return }
-        $i = $dgvRef.SelectedRows[0].Index
-        if ($i -ge $dgvRef.Rows.Count - 1) { return }
-        $ao = $dgvRef.Rows[$i  ].Cells["OrigName"].Value; $an = $dgvRef.Rows[$i  ].Cells["Nome"].Value
-        $bo = $dgvRef.Rows[$i+1].Cells["OrigName"].Value; $bn = $dgvRef.Rows[$i+1].Cells["Nome"].Value
-        $dgvRef.Rows[$i  ].Cells["OrigName"].Value = $bo; $dgvRef.Rows[$i  ].Cells["Nome"].Value = $bn
-        $dgvRef.Rows[$i+1].Cells["OrigName"].Value = $ao; $dgvRef.Rows[$i+1].Cells["Nome"].Value = $an
-        $dgvRef.ClearSelection(); $dgvRef.Rows[$i+1].Selected = $true
-        $dgvRef.CurrentCell = $dgvRef.Rows[$i+1].Cells["Nome"]
-    }.GetNewClosure())
-
-    $btnSave.add_Click({
-        $dgvRef.EndEdit() | Out-Null
-        $updates = [System.Collections.Generic.List[PSObject]]::new()
-        for ($i = 0; $i -lt $dgvRef.Rows.Count; $i++) {
-            $origName = "$($dgvRef.Rows[$i].Cells['OrigName'].Value)".Trim()
-            $newName  = "$($dgvRef.Rows[$i].Cells['Nome'].Value)".Trim()
-            if ([string]::IsNullOrEmpty($origName)) { continue }
-            if ([string]::IsNullOrEmpty($newName))  { $newName = $origName }
-            $newOrder = ($i + 1) * 10
-            $oldFile  = Get-ChildItem $script:macrosFolder -Filter "*.json" | Where-Object {
-                try { (Get-Content $_.FullName -Raw | ConvertFrom-Json).name -eq $origName } catch { $false }
-            } | Select-Object -First 1
-            if (-not $oldFile) { continue }
-            $raw = Get-Content $oldFile.FullName -Raw -Encoding UTF8
-            if ($raw -match '"actions"\s*:\s*(\[[\s\S]*\])\s*\}\s*$') {
-                $actionsJson = $Matches[1]
-                $escapedName = $newName -replace '\\', '\\\\' -replace '"', '\"'
-                $newJson     = '{"name":"' + $escapedName + '","order":' + $newOrder + ',"actions":' + $actionsJson + '}'
-                $safe        = $newName -replace '[\\/:*?"<>|]', '_'
-                $newFilename = "{0:D3}_{1}.json" -f $newOrder, $safe
-                $newPath     = Join-Path $script:macrosFolder $newFilename
-                $updates.Add([PSCustomObject]@{ OldPath = $oldFile.FullName; NewPath = $newPath; Content = $newJson })
-            }
-        }
-        foreach ($u in $updates) { if (Test-Path $u.OldPath) { Remove-Item $u.OldPath -Force } }
-        foreach ($u in $updates) { [System.IO.File]::WriteAllText($u.NewPath, $u.Content, [System.Text.Encoding]::UTF8) }
-        $script:macros = Load-Macros
-        $cboRef.Items.Clear()
-        foreach ($k in $script:macros.Keys) { $cboRef.Items.Add($k) | Out-Null }
-        $mgrRef.Close()
-    }.GetNewClosure())
-
-    $btnClose.add_Click({ $mgrRef.Close() }.GetNewClosure())
-    $mgr.ShowDialog() | Out-Null
-}
-
-
-# ============================================================
 #  FORMULARIO EXECUTOR (principal)
 # ============================================================
 
@@ -1473,8 +1331,6 @@ $lblRepeat = New-Object System.Windows.Forms.Label
 $lblRepeat.Text="vezes"; $lblRepeat.Location=New-Object System.Drawing.Point(186,121); $lblRepeat.Size=New-Object System.Drawing.Size(42,16); $lblRepeat.ForeColor=$cBorder; $lblRepeat.Font=$fontSm
 $form.Controls.Add($lblRepeat)
 
-$btnGerir = New-FlatButton "GERIR" 238 115 78 22 $cBorder $form
-
 $chkLoop.add_CheckedChanged({ if($chkLoop.Checked){$chkRepeat.Checked=$false;$txtRepeat.Enabled=$false} })
 $chkRepeat.add_CheckedChanged({ if($chkRepeat.Checked){$chkLoop.Checked=$false;$txtRepeat.Enabled=$true} else{$txtRepeat.Enabled=$false} })
 
@@ -1522,6 +1378,5 @@ $btnRefresh.add_Click({
     foreach ($k in $script:macros.Keys) { $comboBox.Items.Add($k) | Out-Null }
     $outputBox.AppendText("Macros recarregados ($($script:macros.Count))`n")
 })
-$btnGerir.add_Click({ Open-ManageForm -parentComboBox $comboBox })
 
 $form.ShowDialog()
