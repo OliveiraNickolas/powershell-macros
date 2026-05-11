@@ -99,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File macros.ps1
 macros/
 ├── macros.ps1          # Main application (this file)
 ├── recorder.ps1        # Legacy recorder module
-├── mouse_position.ps1  # Legacy mouse tracking module
+├── mouseposition.ps1   # Legacy mouse tracking module
 ├── macros/             # Stored macro files (JSON)
 │   ├── 010_example.json
 │   └── ...

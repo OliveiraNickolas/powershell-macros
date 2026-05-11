@@ -341,13 +341,15 @@ function Load-Macros {
     $result = [ordered]@{}
     $files = Get-ChildItem $script:macrosFolder -Filter "*.json" -ErrorAction SilentlyContinue
     if (-not $files) { return $result }
-    $files | ForEach-Object {
+    foreach ($f in $files) {
         try {
-            $d = Get-Content $_.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+            $d = Get-Content $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
             $result[$d.name] = $d
-        } catch { }
-    } | Sort-Object { try { [int]$_.order } catch { 999 } }
-    # Reordenar pelo campo order
+        } catch {
+            Write-Warning "Falha a carregar $($f.Name): $($_.Exception.Message)"
+        }
+    }
+    # Ordenar pelo campo order
     $sorted = [ordered]@{}
     $result.GetEnumerator() | Sort-Object { try { [int]$_.Value.order } catch { 999 } } | ForEach-Object {
         $sorted[$_.Key] = $_.Value.actions
@@ -364,9 +366,9 @@ function Get-NextOrder {
 }
 
 function Save-RecordedMacro {
-    param([string]$name)
+    param([string]$name, [int]$preserveOrder = 0)
     if ([MacroRecorder]::ActionJsonLines.Count -eq 0) { return $false }
-    $order    = Get-NextOrder
+    $order    = if ($preserveOrder -gt 0) { $preserveOrder } else { Get-NextOrder }
     $jsonBody = "[" + ([MacroRecorder]::ActionJsonLines -join ",") + "]"
     $safe     = $name -replace '[\\/:*?"<>|]', '_'
     $filename = "{0:D3}_{1}.json" -f $order, $safe
@@ -432,7 +434,10 @@ function Invoke-Delay {
 function Invoke-TypeText {
     param([string]$text)
     Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.SendKeys]::SendWait($text)
+    # SendKeys interpreta + ^ % ~ ( ) { } [ ] como modificadores/grupos.
+    # Envolver cada um em {} para enviar o caractere literal.
+    $escaped = [regex]::Replace($text, '[+^%~(){}\[\]]', { '{' + $args[0].Value + '}' })
+    [System.Windows.Forms.SendKeys]::SendWait($escaped)
 }
 
 function Write-Output2 { param([string]$msg) $script:outputBox.AppendText("$msg`n") }
@@ -537,6 +542,7 @@ function Execute-Script {
             "F3" {[User32]::SendKey([User32]::VK_F3)} "F4" {[User32]::SendKey([User32]::VK_F4)}
             "F5" {[User32]::SendKey([User32]::VK_F5)} "F6" {[User32]::SendKey([User32]::VK_F6)}
             "F7" {[User32]::SendKey([User32]::VK_F7)} "F8" {[User32]::SendKey([User32]::VK_F8)}
+            "F9" {[User32]::SendKey([User32]::VK_F9)}
             "F10"{[User32]::SendKey([User32]::VK_F10)}"F11"{[User32]::SendKey([User32]::VK_F11)}
             "F12"{[User32]::SendKey([User32]::VK_F12)}
             "Click"       { Invoke-Click      -x $action.X -y $action.Y }
@@ -1122,6 +1128,15 @@ function Open-RecorderForm {
     $recBtnGravar.add_Click({
         if([MacroRecorder]::IsRecording){return}
         $ctl=$script:recCtl
+        # Se o grid tem conteúdo (edição ou gravação anterior), confirmar antes de limpar
+        if($ctl.dgv.Rows.Count -gt 0){
+            $r=[System.Windows.Forms.MessageBox]::Show(
+                "Iniciar nova gravação vai apagar as $($ctl.dgv.Rows.Count) ação(ões) atuais. Continuar?",
+                "Confirmar nova gravação",
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
+                [System.Windows.Forms.MessageBoxIcon]::Warning)
+            if($r -ne [System.Windows.Forms.DialogResult]::Yes){return}
+        }
         $ctl.dgv.Rows.Clear();$ctl.logCount=0;$ctl.previewRow=-1
         [MacroRecorder]::ActionLog.Clear();[MacroRecorder]::ActionJsonLines.Clear()
         [MacroRecorder]::OnStop=[Action]{}
@@ -1190,14 +1205,19 @@ function Open-RecorderForm {
             }
             if($jline){[MacroRecorder]::ActionJsonLines.Add($jline)|Out-Null}
         }
-        # Se estiver a editar macro existente: apagar ficheiro antigo primeiro
+        # Se estiver a editar macro existente: capturar o order original
+        # e apagar ficheiro antigo antes de gravar o novo
+        $oldOrder = 0
         if($ctl.editName){
             $oldFile=Get-ChildItem $script:macrosFolder -Filter "*.json" | Where-Object {
                 try{(Get-Content $_.FullName -Raw|ConvertFrom-Json).name -eq $ctl.editName}catch{$false}
             } | Select-Object -First 1
-            if($oldFile){ Remove-Item $oldFile.FullName -Force }
+            if($oldFile){
+                try{ $oldOrder=[int](Get-Content $oldFile.FullName -Raw|ConvertFrom-Json).order }catch{}
+                Remove-Item $oldFile.FullName -Force
+            }
         }
-        $ok=Save-RecordedMacro -name $nome
+        $ok=Save-RecordedMacro -name $nome -preserveOrder $oldOrder
         if($ok){
             $ctl.editName=$nome
             $script:macros=Load-Macros
